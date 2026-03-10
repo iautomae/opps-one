@@ -114,8 +114,9 @@ export function NebulaBackground() {
         }
 
         const render = () => {
-            // Fondo muy oscuro pero transparente para el trail (rastro dejado por movimiento)
-            ctx.fillStyle = 'rgba(2, 6, 5, 0.3)';
+            // Fondo muy oscuro casi sólido para limpiar correctamente los gradientes sin saturar la pantalla de verde
+            // pero que deje una leve estela muy suave a las partículas.
+            ctx.fillStyle = 'rgba(2, 6, 5, 0.95)';
             ctx.fillRect(0, 0, width, height);
 
             // Actualizar núcleos (flotan aleatoriamente)
