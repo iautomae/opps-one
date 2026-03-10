@@ -48,7 +48,7 @@ export default function LibroReclamacionesPage() {
                     Libro de <span className="text-brand-turquoise">Reclamaciones</span>
                 </h1>
                 <p className="text-slate-500 text-center text-sm">
-                    Iautomae Systems - Conforme al reglamento de la Ley N° 29571.
+                    Opps One - Conforme al reglamento de la Ley N° 29571.
                 </p>
             </header>
 
@@ -140,7 +140,7 @@ export default function LibroReclamacionesPage() {
                         )}
                     </button>
                     <p className="mt-4 text-[10px] text-slate-500 text-center leading-relaxed">
-                        Acepto que Iautomae Systems trate mis datos personales según la Política de Privacidad para fines de atención a este reclamo.
+                        Acepto que Opps One trate mis datos personales según la Política de Privacidad para fines de atención a este reclamo.
                     </p>
                 </div>
             </form>

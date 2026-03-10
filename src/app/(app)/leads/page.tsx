@@ -7,7 +7,7 @@ export default function LeadsRedirect() {
 
     useEffect(() => {
         // Default redirect for the simplified UI version
-        router.push("/leads/iautomae/dashboard");
+        router.push("/leads/app/dashboard");
     }, [router]);
 
     return (

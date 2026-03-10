@@ -19,6 +19,7 @@ export type UserProfile = {
     has_leads_access: boolean;
     brand_logo?: string | null;
     empresa_id: string | null;
+    tenant_id: string | null;
     empresa?: Company | null;
 } | null;
 
@@ -40,10 +41,17 @@ export function useProfile() {
                     .from('profiles')
                     .select('*')
                     .eq('id', user.id)
-                    .single();
+                    .maybeSingle();
 
-                if (error) {
-                    console.error('Error fetching profile:', error.message);
+                if (error || !data) {
+                    if (error) {
+                        console.error('Error fetching profile:', error.message);
+                    } else {
+                        console.warn('Profile not found, stale session?');
+                        // Optionally sign out the user if profile completely missing:
+                        // await supabase.auth.signOut();
+                    }
+
                     setProfile({
                         id: user.id,
                         email: user.email || '',
@@ -52,6 +60,7 @@ export function useProfile() {
                         has_leads_access: false,
                         brand_logo: null,
                         empresa_id: null,
+                        tenant_id: null,
                         empresa: null
                     });
                 } else {

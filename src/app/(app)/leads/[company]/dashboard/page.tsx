@@ -860,7 +860,7 @@ export default function DynamicLeadsDashboard() {
     };
 
     const handleVerifyImportKey = async () => {
-        const correctKey = process.env.NEXT_PUBLIC_IMPORT_KEY || 'iautomae2025';
+        const correctKey = process.env.NEXT_PUBLIC_IMPORT_KEY || 'oppsone2026';
         if (importKey !== correctKey) {
             setImportKeyError('Clave incorrecta. Inténtalo de nuevo.');
             return;
@@ -1876,7 +1876,7 @@ export default function DynamicLeadsDashboard() {
                                                 <div className="flex items-center justify-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-100 shadow-sm">
                                                     <Lock size={10} className="text-gray-400" />
                                                     <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                                                        Protegido y guardado por <span className="text-brand-primary">iautomae systems</span>
+                                                        Protegido y guardado por <span className="text-brand-primary">Opps One</span>
                                                     </p>
                                                 </div>
                                             </div>

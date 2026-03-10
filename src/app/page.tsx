@@ -17,7 +17,7 @@ export default function LandingPage() {
             <nav className="fixed top-0 left-0 w-full z-[100] px-8 py-6 flex items-center justify-between backdrop-blur-md bg-black/20 border-b border-white/5">
                 <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                     <img src="/brand/logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl object-cover shadow-lg shadow-brand-turquoise/20" />
-                    <span className="text-xl font-bold tracking-tighter text-white">IAUTOMAE</span>
+                    <span className="text-xl font-bold tracking-tighter text-white">OPPS ONE</span>
                 </Link>
                 <div className="hidden md:flex items-center gap-10">
                     <a href="#nosotros" className="text-sm font-medium text-slate-400 hover:text-brand-turquoise transition-colors">Sobre Nosotros</a>
@@ -50,7 +50,7 @@ export default function LandingPage() {
                     </h1>
 
                     <p className="max-w-2xl mx-auto text-lg text-slate-300 font-medium leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                        En IAUTOMAE desarrollamos ecosistemas digitales inteligentes. Desde agentes de IA autónomos hasta infraestructuras de software a medida para empresas que buscan el futuro hoy.
+                        En OPPS ONE desarrollamos ecosistemas digitales inteligentes. Desde agentes de IA autónomos hasta infraestructuras de software a medida para empresas que buscan el futuro hoy.
                     </p>
 
                     <div className="flex flex-col md:flex-row items-center justify-center gap-6 pt-10 animate-in fade-in slide-in-from-bottom-10 duration-1000">
@@ -129,7 +129,7 @@ export default function LandingPage() {
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-brand-turquoise/10 blur-[100px] -mr-32 -mt-32" />
                                 <h4 className="text-xl font-bold text-white uppercase tracking-widest text-brand-turquoise">Por qué elegirnos</h4>
                                 <p className="text-slate-200 font-medium leading-relaxed">
-                                    Somos artesanos del código. En IAUTOMAE, cada línea de software es una herramienta estratégica diseñada para escalar. No entregamos productos, entregamos ventajas competitivas.
+                                    Somos artesanos del código. En OPPS ONE, cada línea de software es una herramienta estratégica diseñada para escalar. No entregamos productos, entregamos ventajas competitivas.
                                 </p>
                                 <div className="space-y-4 pt-6">
                                     {[
@@ -153,7 +153,7 @@ export default function LandingPage() {
             <section id="nosotros" className="py-32 px-8 relative z-10">
                 <div className="max-w-3xl mx-auto text-center space-y-20">
                     <div className="space-y-6">
-                        <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-turquoise">Filosofía IAUTOMAE</h2>
+                        <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-turquoise">Filosofía OPPS ONE</h2>
                         <p className="text-3xl md:text-4xl font-bold text-white tracking-tight">NUESTRO COMPROMISO ES <br /> TU ESCALABILIDAD.</p>
                     </div>
 
@@ -198,7 +198,7 @@ export default function LandingPage() {
                     <div className="space-y-6">
                         <div className="flex items-center gap-3">
                             <img src="/brand/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg object-cover grayscale opacity-50" />
-                            <span className="text-lg font-bold tracking-tighter text-white/50">IAUTOMAE</span>
+                            <span className="text-lg font-bold tracking-tighter text-white/50">OPPS ONE</span>
                         </div>
                         <p className="text-xs text-slate-500 leading-relaxed max-w-xs">
                             Infraestructura digital para la próxima generación de empresas.
@@ -230,7 +230,7 @@ export default function LandingPage() {
 
                     <div className="space-y-6">
                         <p className="text-[10px] text-slate-600 uppercase tracking-widest mt-8">
-                            © 2026 Iautomae Systems
+                            © 2026 Opps One
                         </p>
                     </div>
                 </div>

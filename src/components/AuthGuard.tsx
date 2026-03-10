@@ -16,28 +16,41 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         if (!isLoading) {
-            // Case 1: No user at all -> Login
-            if (!user && pathname !== '/login') {
+            // Case 1: No user at all -> Login (Permiting public routes)
+            if (!user && pathname !== '/login' && !pathname.endsWith('/set-password')) {
                 router.push('/login');
                 return;
             }
 
-            // Simple Rule: If user has leads access, they are approved.
+            // Simple Rule: If user has leads access or tramites feature, they are approved.
             // Otherwise, they go to pending-approval.
             if (user && profile) {
-                if (profile.has_leads_access) {
+                const hasAnyAccess = profile.has_leads_access || profile.features?.['tramites'];
+
+                if (hasAnyAccess) {
                     // If they are specifically in pending-approval but ALREADY have access, move them out
                     if (pathname === '/pending-approval') {
-                        router.push('/leads');
+                        router.push(profile.has_leads_access ? '/leads' : '/tramites');
                         return;
                     }
                     // Protection: If they try to go to pages they don't have access to (docs/forms skeletons)
                     if (pathname.startsWith('/documents') || pathname.startsWith('/forms')) {
+                        router.push(profile.has_leads_access ? '/leads' : '/tramites');
+                        return;
+                    }
+
+                    // Strict boundary protection
+                    if (pathname.startsWith('/leads') && !profile.has_leads_access) {
+                        router.push('/tramites');
+                        return;
+                    }
+                    if (pathname.startsWith('/tramites') && !profile.features?.['tramites']) {
                         router.push('/leads');
                         return;
                     }
+
                 } else {
-                    // No leads access -> Pending Approval
+                    // No access -> Pending Approval
                     if (pathname !== '/pending-approval') {
                         router.push('/pending-approval');
                         return;
@@ -59,8 +72,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     // Protection during redirection
-    if (!user && pathname !== '/login') return null;
-    if (user && profile && !profile.has_leads_access && pathname !== '/pending-approval') return null;
+    if (!user && pathname !== '/login' && !pathname.endsWith('/set-password')) return null;
+    if (user && profile && !profile.has_leads_access && !profile.features?.['tramites'] && pathname !== '/pending-approval') return null;
 
     return <>{children}</>;
 }

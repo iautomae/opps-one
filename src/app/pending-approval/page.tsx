@@ -13,8 +13,12 @@ export default function PendingApprovalPage() {
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && profile?.has_leads_access) {
-            router.push('/leads');
+        if (!loading) {
+            if (profile?.has_leads_access) {
+                router.push('/leads');
+            } else if (profile?.features?.['tramites']) {
+                router.push('/tramites');
+            }
         }
     }, [profile, loading, router]);
 
@@ -42,7 +46,7 @@ export default function PendingApprovalPage() {
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Cuenta en Revisión</h1>
                     <p className="text-gray-500 text-sm leading-relaxed">
-                        ¡Hola! Hemos recibido tu registro correctamente. Por seguridad y para garantizar la mejor experiencia, un administrador de <span className="font-bold text-gray-900">iAutomae</span> activará tu cuenta manualmente en breve.
+                        ¡Hola! Hemos recibido tu registro correctamente. Por seguridad y para garantizar la mejor experiencia, un administrador de <span className="font-bold text-gray-900">Opps One</span> activará tu cuenta manualmente en breve.
                     </p>
                 </div>
 
@@ -78,7 +82,7 @@ export default function PendingApprovalPage() {
                 </div>
 
                 <p className="text-[10px] text-gray-300 font-medium">
-                    Powered by IAutomae Systems • ID de Seguridad v2.0
+                    Powered by Opps One • ID de Seguridad v2.0
                 </p>
             </div>
         </div>

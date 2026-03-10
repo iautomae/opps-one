@@ -18,9 +18,13 @@
     "eslint-config-next": "^15.1.7",
     "lucide-react": "^0.563.0",
     "next": "^15.1.7",
+    "node-fetch": "^3.3.2",
     "pdf-lib": "^1.17.1",
+    "pg": "^8.20.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "recharts": "^3.8.0",
+    "resend": "^6.9.3",
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.4.0"
   },

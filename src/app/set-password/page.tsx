@@ -15,7 +15,6 @@ import {
     EyeOff
 } from 'lucide-react';
 import Link from 'next/link';
-import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
 
 export default function SetPasswordPage() {
     const [email, setEmail] = useState('');
@@ -40,8 +39,6 @@ export default function SetPasswordPage() {
                 return;
             }
 
-            // NEW LOGIC: Check metadata for onboarding status
-            // This prevents the "invite link loop" by flagging users who have already set their password.
             if (session.user.user_metadata?.onboarding_completed) {
                 setAlreadyOnboarded(true);
             }
@@ -87,7 +84,6 @@ export default function SetPasswordPage() {
             setError(error.message);
             setUpdating(false);
         } else {
-            // SUCCESS: Mark user as onboarded in metadata to prevent future link reuse
             await supabase.auth.updateUser({
                 data: { onboarding_completed: true }
             });
@@ -95,8 +91,6 @@ export default function SetPasswordPage() {
             setSuccess(true);
             setUpdating(false);
 
-            // NEW FLOW: Sign out and redirect to login
-            // The user requested to be taken to login to enter credentials manually
             setTimeout(async () => {
                 await supabase.auth.signOut();
                 router.push('/login');
@@ -106,176 +100,149 @@ export default function SetPasswordPage() {
 
     if (loading) {
         return (
-            <div className="fixed inset-0 bg-[#050505] flex items-center justify-center">
+            <div className="min-h-screen bg-white flex items-center justify-center p-4">
                 <Loader2 className="text-brand-turquoise animate-spin" size={40} />
             </div>
         );
     }
 
     return (
-        <div className="fixed inset-0 z-[100] bg-[#F9FAFB] flex flex-col md:flex-row">
-            {/* Branding Side (Elegant Dark) */}
-            <div className="hidden md:flex md:w-1/2 bg-[#050505] p-12 flex-col items-center justify-center relative overflow-hidden">
-                <NeuralNetworkBackground
-                    particleCount={120}
-                    connectionDistance={130}
-                    mouseRadius={150}
-                />
-                <div className="absolute top-0 left-0 w-full h-full bg-white/2 blur-[120px] pointer-events-none" />
-
-                <Link href="/" className="relative z-10 hover:opacity-90 transition-opacity">
-                    <img
-                        src="/brand/logo_transparent.png"
-                        alt="IAUTOMAE AI SYSTEMS"
-                        className="w-full max-w-[520px] h-auto object-contain"
-                    />
-                </Link>
-
-                <div className="absolute bottom-12 left-12 z-10 text-white/20 text-[10px] tracking-[0.3em] uppercase">
-                    © 2026 IAUTOMAE • Intelligence Infrastructure
-                </div>
-            </div>
-
-            {/* Form Side */}
-            <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-white">
-                <div className="w-full max-w-md space-y-10">
-                    <Link href="/" className="md:hidden flex flex-col items-center mb-10 text-center hover:opacity-80 transition-opacity">
-                        <img src="/brand/logo_full.png" alt="Logo" className="w-48 h-auto object-contain mb-2" />
+        <div className="min-h-screen flex items-center justify-center bg-white p-4">
+            <div className="w-full max-w-sm space-y-8 animate-in fade-in zoom-in duration-500">
+                <div className="flex flex-col items-center text-center">
+                    <Link href="/" className="hover:opacity-80 transition-opacity mb-8">
+                        <img src="/brand/logo_full_dark.png" alt="Logo" className="h-12 object-contain" onError={(e) => { e.currentTarget.src = "/brand/logo_full.png"; e.currentTarget.className = "h-12 object-contain invert grayscale" }} />
                     </Link>
 
-                    <div className="space-y-4 text-center">
+                    <div className="space-y-4">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-turquoise/10 border border-brand-turquoise/20 text-brand-turquoise text-xs font-bold uppercase tracking-wider mx-auto">
                             <ShieldCheck size={14} />
                             {isRecovery ? 'Recuperación de Acceso' : 'Configuración de Acceso'}
                         </div>
-                        <h3 className="text-3xl font-bold text-gray-900 tracking-tight">
+                        <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
                             {alreadyOnboarded && !isRecovery ? 'Cuenta ya existente' : isRecovery ? 'Restablece tu clave' : 'Crea tu contraseña'}
                         </h3>
                     </div>
+                </div>
 
-                    {alreadyOnboarded && !isRecovery ? (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl space-y-3">
-                                <p className="text-amber-800 text-sm font-medium text-center leading-relaxed">
-                                    Parece que ya has configurado tu cuenta anteriormente. Para tu seguridad, no puedes crear otra contraseña desde este enlace.
-                                </p>
+                {alreadyOnboarded && !isRecovery ? (
+                    <div className="space-y-6">
+                        <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl">
+                            <p className="text-amber-800 text-sm font-medium text-center leading-relaxed">
+                                Parece que ya has configurado tu cuenta anteriormente. Para tu seguridad, no puedes crear otra contraseña desde este enlace.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <Link
+                                href="/login"
+                                className="w-full py-4 rounded-xl bg-brand-turquoise text-white text-sm font-bold shadow-md hover:bg-brand-turquoise/90 flex items-center justify-center gap-2 group transition-colors"
+                            >
+                                INGRESAR AL SISTEMA
+                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            </Link>
+
+                            <button
+                                onClick={() => router.push('/login?view=recovery')}
+                                className="w-full py-4 text-xs font-bold text-gray-500 hover:text-brand-turquoise transition-colors flex items-center justify-center gap-2"
+                            >
+                                <History size={16} />
+                                RECUPERAR CONTRASEÑA
+                            </button>
+                        </div>
+                    </div>
+                ) : !success ? (
+                    <form onSubmit={handleSetPassword} className="space-y-5">
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-700 ml-1">Tu correo electrónico</label>
+                            <div className="relative opacity-60">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <input
+                                    type="email"
+                                    value={email}
+                                    readOnly
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-12 pr-4 text-gray-500 cursor-not-allowed outline-none"
+                                />
                             </div>
+                        </div>
 
-                            <div className="flex flex-col gap-4">
-                                <Link
-                                    href="/login"
-                                    className="btn-primary w-full py-4 text-sm tracking-widest font-bold shadow-lg shadow-brand-turquoise/20 flex items-center justify-center gap-2 group"
-                                >
-                                    INGRESAR AL SISTEMA
-                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                                </Link>
-
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-700 ml-1">Nueva contraseña</label>
+                            <div className="relative group">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-turquoise transition-colors" size={20} />
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Min. 6 caracteres"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-12 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-turquoise/50 focus:border-brand-turquoise transition-all"
+                                    required
+                                />
                                 <button
-                                    onClick={() => router.push('/login?view=recovery')}
-                                    className="w-full py-4 text-xs font-bold text-gray-400 hover:text-brand-turquoise transition-colors flex items-center justify-center gap-2"
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
                                 >
-                                    <History size={16} />
-                                    RECUPERAR CONTRASEÑA
+                                    {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
                                 </button>
                             </div>
                         </div>
-                    ) : !success ? (
-                        <form onSubmit={handleSetPassword} className="space-y-6">
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tu correo electrónico</label>
-                                <div className="relative group opacity-60">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        readOnly
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl py-4 pl-12 pr-4 text-gray-500 cursor-not-allowed outline-none"
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-gray-700 uppercase tracking-widest ml-1">Nueva contraseña</label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-brand-turquoise transition-colors" size={20} />
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Min. 6 caracteres"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-12 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-turquoise/50 focus:border-brand-turquoise transition-all"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-                                    >
-                                        {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-gray-700 uppercase tracking-widest ml-1">Confirmar contraseña</label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-brand-turquoise transition-colors" size={20} />
-                                    <input
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        placeholder="Repite tu contraseña"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-12 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-turquoise/50 focus:border-brand-turquoise transition-all"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-                                    >
-                                        {showConfirmPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {error && (
-                                <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-red-600 text-sm font-medium">
-                                    {error}
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={updating}
-                                className="btn-primary w-full py-4 text-sm tracking-widest font-bold shadow-lg shadow-brand-turquoise/20 flex items-center justify-center gap-2 group"
-                            >
-                                {updating ? <Loader2 className="animate-spin" size={20} /> : (
-                                    <>
-                                        {isRecovery ? 'RESTABLECER CONTRASEÑA' : 'ACTIVAR MI CUENTA'}
-                                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                                    </>
-                                )}
-                            </button>
-                        </form>
-                    ) : (
-                        <div className="bg-brand-turquoise/5 border border-brand-turquoise/20 rounded-2xl p-8 text-center space-y-4 animate-in fade-in zoom-in duration-500">
-                            <div className="flex justify-center">
-                                <CheckCircle2 className="text-brand-turquoise" size={60} />
-                            </div>
-                            <h4 className="text-xl font-bold text-gray-900">{isRecovery ? '¡Clave actualizada!' : '¡Contraseña establecida!'}</h4>
-                            <p className="text-gray-500">
-                                {isRecovery ? 'Tu contraseña ha sido restablecida con éxito.' : 'Tu cuenta de IAUTOMAE ha sido activada correctamente.'} Redirigiendo al inicio de sesión...
-                            </p>
-                            <div className="flex justify-center pt-4">
-                                <Loader2 className="text-brand-turquoise animate-spin" size={24} />
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-700 ml-1">Confirmar contraseña</label>
+                            <div className="relative group">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-turquoise transition-colors" size={20} />
+                                <input
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    placeholder="Repite tu contraseña"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-12 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-turquoise/50 focus:border-brand-turquoise transition-all"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                                >
+                                    {showConfirmPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                                </button>
                             </div>
                         </div>
-                    )}
 
-                    <p className="text-center text-gray-400 text-[10px] uppercase tracking-[0.2em] leading-relaxed">
-                        Security Layer v2.0 • Encryption Protocol Enabled
-                    </p>
-                </div>
+                        {error && (
+                            <div className="bg-red-50 border border-red-100 p-3 rounded-xl text-red-600 text-sm font-medium text-center">
+                                {error}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={updating}
+                            className="w-full py-4 mt-2 rounded-xl bg-brand-turquoise text-white text-sm font-bold shadow-md hover:bg-brand-turquoise/90 flex items-center justify-center gap-2 group transition-all disabled:opacity-50"
+                        >
+                            {updating ? <Loader2 className="animate-spin" size={20} /> : (
+                                <>
+                                    {isRecovery ? 'RESTABLECER CONTRASEÑA' : 'ACTIVAR MI CUENTA'}
+                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
+                        </button>
+                    </form>
+                ) : (
+                    <div className="bg-green-50 border border-green-100 rounded-2xl p-8 text-center space-y-4">
+                        <div className="flex justify-center">
+                            <CheckCircle2 className="text-green-500" size={50} />
+                        </div>
+                        <h4 className="text-xl font-bold text-gray-900">{isRecovery ? '¡Clave actualizada!' : '¡Contraseña establecida!'}</h4>
+                        <p className="text-gray-600 text-sm">
+                            {isRecovery ? 'Tu contraseña ha sido restablecida con éxito.' : 'Tu cuenta ha sido activada correctamente.'} Redirigiendo al inicio de sesión...
+                        </p>
+                        <div className="flex justify-center pt-2">
+                            <Loader2 className="text-green-500 animate-spin" size={24} />
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

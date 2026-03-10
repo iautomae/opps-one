@@ -11,6 +11,12 @@ import {
   Shield,
   Calendar,
   MapPin,
+  FileText,
+  LayoutDashboard,
+  Activity,
+  CheckCircle,
+  Receipt,
+  ClipboardList,
   type LucideIcon
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -33,10 +39,14 @@ interface MenuItem {
 }
 
 const PRIMARY_MENU: MenuItem[] = [
-  { id: 'admin' as MainCategory, icon: Shield, label: 'Admin', href: '/admin', permission: 'admin_only' },
-  { id: 'leads' as MainCategory, icon: Users, label: 'Agentes', href: '/leads', permission: 'has_leads_access' },
-  { id: 'calendar' as MainCategory, icon: Calendar, label: 'Calendario', href: '/calendar', feature: 'calendar' },
-  { id: 'gps' as MainCategory, icon: MapPin, label: 'Rutas GPS', href: '/gps', feature: 'gps' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+  { id: 'tramites', icon: FileText, label: 'Trámites' },
+  { id: 'citas', icon: Calendar, label: 'Citas', href: '/citas' },
+  { id: 'seguimiento', icon: Activity, label: 'Seguimiento', href: '/seguimiento' },
+  { id: 'terminados', icon: CheckCircle, label: 'Terminados', href: '/terminados' },
+  { id: 'finanzas', icon: Receipt, label: 'Finanzas', href: '/finanzas' },
+  { id: 'requerimientos', icon: ClipboardList, label: 'Requerimientos', href: '/requerimientos' },
+  { id: 'admin', icon: Shield, label: 'Panel Maestro', href: '/admin', permission: 'admin_only' },
 ];
 
 export function Sidebar() {
@@ -44,7 +54,7 @@ export function Sidebar() {
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
-  const { activeCategory, setActiveCategory, setSubSidebarOpen } = useUI();
+  const { activeCategory, setActiveCategory, isSubSidebarOpen, setSubSidebarOpen } = useUI();
 
   // USER: Change this URL to your default logo image path
   const DEFAULT_LOGO_URL = "/brand/logo.jpg";
@@ -121,7 +131,7 @@ export function Sidebar() {
       </div>
 
       {/* Primary Navigation */}
-      <nav className="flex-1 flex flex-col gap-4">
+      <nav className="flex-1 flex flex-col gap-2">
         {visibleMenu.map((item) => {
           const isActive = activeCategory === item.id;
           return (
@@ -132,6 +142,9 @@ export function Sidebar() {
                 if (item.href) {
                   setSubSidebarOpen(false);
                   router.push(item.href);
+                } else {
+                  // Toggle subsidebar if clicking the same active category, else just open it
+                  setSubSidebarOpen(isActive ? !isSubSidebarOpen : true);
                 }
               }}
               className={cn(
@@ -156,7 +169,7 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom Actions */}
-      <div className="mt-auto flex flex-col gap-4">
+      <div className="mt-auto flex flex-col gap-2">
         <button
           onClick={() => setActiveCategory('settings')}
           className={cn(

@@ -18,7 +18,7 @@ export default function PrivacyPage() {
                         <span className="text-brand-turquoise">01.</span> Identidad y Responsabilidad
                     </h2>
                     <p>
-                        Iautomae Systems, con domicilio en Lima, Perú, actúa como titular del banco de datos personales y responsable del tratamiento de la información recopilada a través de nuestra plataforma. De conformidad con la Ley N° 29733 (Ley de Protección de Datos Personales) y su Reglamento, garantizamos la implementación de medidas técnicas, organizativas y legales para asegurar la privacidad y seguridad de sus datos.
+                        Opps One, con domicilio en Lima, Perú, actúa como titular del banco de datos personales y responsable del tratamiento de la información recopilada a través de nuestra plataforma. De conformidad con la Ley N° 29733 (Ley de Protección de Datos Personales) y su Reglamento, garantizamos la implementación de medidas técnicas, organizativas y legales para asegurar la privacidad y seguridad de sus datos.
                     </p>
                 </section>
 
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
                         <span className="text-brand-turquoise">04.</span> Procesamiento mediante Inteligencia Artificial
                     </h2>
                     <p>
-                        Al utilizar nuestros servicios, usted reconoce que los datos operativos pueden ser procesados a través de modelos de terceros (como OpenAI, Anthropic o Google) bajo protocolos de API seguros. Iautomae Systems se asegura de que estos proveedores mantengan estándares de privacidad rigurosos, garantizando que su data no sea utilizada para el entrenamiento de modelos públicos externos, manteniendo la exclusividad y confidencialidad corporativa.
+                        Al utilizar nuestros servicios, usted reconoce que los datos operativos pueden ser procesados a través de modelos de terceros (como OpenAI, Anthropic o Google) bajo protocolos de API seguros. Opps One se asegura de que estos proveedores mantengan estándares de privacidad rigurosos, garantizando que su data no sea utilizada para el entrenamiento de modelos públicos externos, manteniendo la exclusividad y confidencialidad corporativa.
                     </p>
                 </section>
 
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
                         <span className="text-brand-turquoise">06.</span> Seguridad y Medidas de Cifrado
                     </h2>
                     <p>
-                        Iautomae Systems aplica protocolos de cifrado AES-256 en reposo y TLS 1.3 en tránsito. Limitamos el acceso a la información personal a empleados y contratistas que estrictamente requieren conocer dichos datos para desempeñar sus funciones laborales, todos ellos sujetos a estrictas cláusulas de confidencialidad y ética profesional en el manejo de propiedad intelectual e información confidencial.
+                        Opps One aplica protocolos de cifrado AES-256 en reposo y TLS 1.3 en tránsito. Limitamos el acceso a la información personal a empleados y contratistas que estrictamente requieren conocer dichos datos para desempeñar sus funciones laborales, todos ellos sujetos a estrictas cláusulas de confidencialidad y ética profesional en el manejo de propiedad intelectual e información confidencial.
                     </p>
                 </section>
 
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
                         <span className="text-brand-turquoise">07.</span> Derechos del Titular (Derechos ARCO)
                     </h2>
                     <p>
-                        Usted podrá ejercer en cualquier momento sus derechos de Acceso, Rectificación, Cancelación y Oposición (ARCO). Para solicitar el retiro de su consentimiento o la eliminación de información sensible de nuestros sistemas de procesamiento por IA, envíe una solicitud formal a <span className="text-brand-turquoise">admin@iautomae.com</span>. Atenderemos su requerimiento dentro de los plazos legales establecidos por la Autoridad Nacional de Protección de Datos Personales.
+                        Usted podrá ejercer en cualquier momento sus derechos de Acceso, Rectificación, Cancelación y Oposición (ARCO). Para solicitar el retiro de su consentimiento o la eliminación de información sensible de nuestros sistemas de procesamiento por IA, envíe una solicitud formal a <span className="text-brand-turquoise">admin@opps.one</span>. Atenderemos su requerimiento dentro de los plazos legales establecidos por la Autoridad Nacional de Protección de Datos Personales.
                     </p>
                 </section>
 
@@ -81,13 +81,13 @@ export default function PrivacyPage() {
                         <span className="text-brand-turquoise">08.</span> Actualizaciones de la Política
                     </h2>
                     <p>
-                        Dada la evolución constante de las tecnologías de Inteligencia Artificial y el marco normativo digital, nos reservamos el derecho de actualizar esta política. Cualquier modificación significativa será notificada a través de nuestra plataforma o mediante correo electrónico a los administradores de las cuentas activas, asegurando que siempre tenga conocimiento de cómo protegemos su privacidad en Iautomae Systems.
+                        Dada la evolución constante de las tecnologías de Inteligencia Artificial y el marco normativo digital, nos reservamos el derecho de actualizar esta política. Cualquier modificación significativa será notificada a través de nuestra plataforma o mediante correo electrónico a los administradores de las cuentas activas, asegurando que siempre tenga conocimiento de cómo protegemos su privacidad en Opps One.
                     </p>
                 </section>
 
                 <div className="pt-10 border-t border-white/5">
                     <p className="text-xs text-slate-500 italic">
-                        Iautomae Systems - Soluciones de Automatización Industrial y Corporativa. Lima, Perú.
+                        Opps One - Soluciones de Automatización Industrial y Corporativa. Lima, Perú.
                     </p>
                 </div>
             </div>

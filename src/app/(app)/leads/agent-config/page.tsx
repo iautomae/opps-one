@@ -588,7 +588,7 @@ export default function AgentConfigPage() {
         <div className="max-w-7xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 px-6 pt-4">
             {/* Navigation Header */}
             <div className="flex items-center">
-                <Link href={`/leads/iautomae/dashboard${viewAsUid ? `?view_as=${viewAsUid}` : ''}`} className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors group">
+                <Link href={`/leads/app/dashboard${viewAsUid ? `?view_as=${viewAsUid}` : ''}`} className="flex items-center gap-2 text-gray-400 hover:text-gray-900 transition-colors group">
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                     <span className="text-xs font-medium uppercase tracking-widest">Volver</span>
                 </Link>

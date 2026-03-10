@@ -14,7 +14,7 @@ export default function LegalLayout({
                     <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/brand/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg object-cover shadow-lg shadow-brand-turquoise/20" />
-                        <span className="text-white text-lg font-bold tracking-tight">IAUTOMAE</span>
+                        <span className="text-white text-lg font-bold tracking-tight">OPPS ONE</span>
                     </Link>
                     <Link href="/" className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-brand-turquoise transition-colors">
                         Volver al Inicio
@@ -31,7 +31,7 @@ export default function LegalLayout({
             <footer className="border-t border-white/5 py-12 px-6">
                 <div className="max-w-3xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <p className="text-[10px] text-slate-600 uppercase tracking-widest">
-                        © 2026 Iautomae Systems • Perú
+                        © 2026 Opps One • Perú
                     </p>
                     <div className="flex gap-8">
                         <Link href="/legal/privacy" className="text-[10px] text-slate-600 uppercase tracking-widest hover:text-brand-turquoise">Privacidad</Link>
