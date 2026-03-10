@@ -110,9 +110,7 @@ export default function SetPasswordPage() {
         <div className="min-h-screen flex items-center justify-center bg-white p-4">
             <div className="w-full max-w-sm space-y-8 animate-in fade-in zoom-in duration-500">
                 <div className="flex flex-col items-center text-center">
-                    <Link href="/" className="hover:opacity-80 transition-opacity mb-8">
-                        <img src="/brand/logo_full_dark.png" alt="Logo" className="h-12 object-contain" onError={(e) => { e.currentTarget.src = "/brand/logo_full.png"; e.currentTarget.className = "h-12 object-contain invert grayscale" }} />
-                    </Link>
+                    {/* Logo Removido por simplicidad */}
 
                     <div className="space-y-4">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-turquoise/10 border border-brand-turquoise/20 text-brand-turquoise text-xs font-bold uppercase tracking-wider mx-auto">

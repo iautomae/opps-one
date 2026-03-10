@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense, use } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { NeuralNetworkBackground } from '@/components/NeuralNetworkBackground';
+import { NebulaBackground } from '@/components/NebulaBackground';
 
 function LoginContent({ subdomain }: { subdomain: string }) {
     const router = useRouter();
@@ -147,15 +147,11 @@ function LoginContent({ subdomain }: { subdomain: string }) {
         );
     }
 
-    // DISEÑO ORIGINAL CON NEURAL NETWORK PARA LOGIN PRINCIPAL
+    // DISEÑO ORIGINAL CON NEBULA BACKGROUND PARA LOGIN PRINCIPAL
     return (
         <div className="min-h-screen flex items-center justify-center relative bg-[#050505] overflow-hidden">
             <div className="absolute inset-0 z-0">
-                <NeuralNetworkBackground
-                    particleCount={750}
-                    connectionDistance={120}
-                    mouseRadius={250}
-                />
+                <NebulaBackground />
             </div>
             <div
                 className="absolute inset-0 z-0 mix-blend-color opacity-20 pointer-events-none"
@@ -227,12 +223,6 @@ function LoginContent({ subdomain }: { subdomain: string }) {
                             {isLoading ? 'Conectando...' : 'Entrar al portal'}
                         </button>
                     </form>
-                </div>
-                <div className="mt-8 text-center">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold flex items-center justify-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#2CDB9B] animate-pulse"></span>
-                        Infraestructura protegida por OPPS ONE
-                    </p>
                 </div>
             </div>
         </div>
