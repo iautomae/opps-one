@@ -18,22 +18,35 @@ export function NebulaBackground() {
         canvas.width = width;
         canvas.height = height;
 
-        // 10 núcleos de nebulosa (clusters)
-        const numCores = 10;
-        // Margen seguro para que comiencen dentro de la pantalla
-        const margin = 100;
+        // 15 núcleos de nebulosa (clusters), 5 más que antes
+        const numCores = 15;
 
-        const cores = Array.from({ length: numCores }, () => ({
-            radius: 40 + Math.random() * 60, // Radios moderados
-            baseX: margin + Math.random() * (width - margin * 2),
-            baseY: margin + Math.random() * (height - margin * 2),
-            speedX: (Math.random() - 0.5) * 0.4,
-            speedY: (Math.random() - 0.5) * 0.4,
-            noisePhase: Math.random() * Math.PI * 2
-        }));
+        // Para que se distribuyan inicialmente en toda la pantalla
+        // los repartiremos matemáticamente en una cuadrícula virtual
+        const cols = 5;
+        const rows = 3;
+        const cellWidth = width / cols;
+        const cellHeight = height / rows;
+
+        const cores = Array.from({ length: numCores }, (_, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            // El centro exacto de la celda + algo de aleatoriedad para que no se vea como tabla
+            const baseX = (col + 0.5) * cellWidth + (Math.random() - 0.5) * (cellWidth * 0.4);
+            const baseY = (row + 0.5) * cellHeight + (Math.random() - 0.5) * (cellHeight * 0.4);
+
+            return {
+                radius: 40 + Math.random() * 60, // Radios moderados
+                baseX,
+                baseY,
+                speedX: (Math.random() - 0.5) * 0.4,
+                speedY: (Math.random() - 0.5) * 0.4,
+                noisePhase: Math.random() * Math.PI * 2
+            };
+        });
 
         const particles: Particle[] = [];
-        const particleCount = 200; // Reducimos para mantener el estilo limpio
+        const particleCount = 250; // Ajustamos para cubrir mejor toda la pantalla
 
         const handleResize = () => {
             width = window.innerWidth;

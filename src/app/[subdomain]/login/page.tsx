@@ -158,43 +158,46 @@ function LoginContent({ subdomain }: { subdomain: string }) {
                 style={{ backgroundColor: primaryColor }}
             />
             <div className="relative z-10 w-full max-w-md mx-auto p-4 md:p-8 animate-in fade-in zoom-in-95 duration-700">
-                <div className="w-full space-y-8 bg-black/40 backdrop-blur-2xl p-8 md:p-10 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10">
-                    <div className="text-center space-y-6">
-                        <div className="flex justify-center">
-                            {logoUrl ? (
+                {/* Rediseño de la tarjeta: Efecto Glassmorphism más claro, premium y elegante */}
+                <div className="w-full space-y-8 bg-white/10 backdrop-blur-xl p-8 md:p-10 rounded-[2rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] border border-white/20 relative overflow-hidden">
+                    {/* Brillo interno sutil arriba */}
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
+
+                    <div className="text-center space-y-6 relative z-10">
+                        {logoUrl && (
+                            <div className="flex justify-center">
                                 <img src={logoUrl} alt={companyName} className="h-20 object-contain drop-shadow-2xl" />
-                            ) : (
-                                <div className="h-16 w-16 bg-gradient-to-br from-indigo-500 rounded-2xl flex items-center justify-center shadow-2xl" style={{ '--tw-gradient-from': primaryColor } as React.CSSProperties}>
-                                    <span className="text-white text-2xl font-bold">{companyName.charAt(0)}</span>
-                                </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                         <div>
                             <h2 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm">Iniciar sesión</h2>
                             <p className="mt-2 text-sm text-slate-300 font-medium">Panel administrativo de <span className="text-white">{companyName}</span></p>
                         </div>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-6 mt-8">
+                    <form onSubmit={handleLogin} className="space-y-6 mt-8 relative z-10">
                         {error && (
-                            <div className="bg-red-500/20 backdrop-blur-md border border-red-500/50 text-red-200 px-4 py-3 rounded-2xl text-sm animate-shake shadow-lg">
+                            <div className="bg-red-500/20 backdrop-blur-md border border-red-500/50 text-red-200 px-4 py-3 rounded-xl text-sm animate-shake shadow-lg flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
                                 {error}
                             </div>
                         )}
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2 ml-1">Email</label>
+                            <label className="block text-sm font-medium text-slate-200 mb-2 ml-1">Email</label>
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-slate-400 focus:ring-2 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-md hover:bg-white/10"
+                                className="w-full px-5 py-3.5 rounded-xl bg-black/20 border border-white/10 text-white placeholder-slate-400 focus:ring-2 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-md hover:bg-black/30 focus:bg-white/5"
                                 style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                             />
                         </div>
                         <div>
                             <div className="flex justify-between items-center mb-2">
-                                <label className="block text-sm font-medium text-slate-300 ml-1">Contraseña</label>
+                                <label className="block text-sm font-medium text-slate-200 ml-1">Contraseña</label>
                                 <button
                                     type="button"
                                     onClick={() => router.push(`/${subdomain}/login?view=recovery`)}
@@ -209,7 +212,7 @@ function LoginContent({ subdomain }: { subdomain: string }) {
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-slate-400 focus:ring-2 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-md hover:bg-white/10"
+                                className="w-full px-5 py-3.5 rounded-xl bg-black/20 border border-white/10 text-white placeholder-slate-400 focus:ring-2 focus:border-transparent transition-all duration-300 outline-none backdrop-blur-md hover:bg-black/30 focus:bg-white/5"
                                 style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                             />
                         </div>
@@ -217,8 +220,11 @@ function LoginContent({ subdomain }: { subdomain: string }) {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full mt-2 py-4 px-4 rounded-2xl text-white font-bold shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
-                            style={{ backgroundColor: primaryColor }}
+                            className="w-full mt-4 py-3.5 px-4 rounded-xl text-black font-bold border border-white/10 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2 hover:brightness-110 shadow-[0_0_15px_rgba(0,0,0,0.2)] hover:shadow-lg"
+                            style={{
+                                backgroundColor: primaryColor,
+                                textShadow: '0 1px 2px rgba(255,255,255,0.2)'
+                            }}
                         >
                             {isLoading ? 'Conectando...' : 'Entrar al portal'}
                         </button>
