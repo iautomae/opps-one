@@ -18,10 +18,24 @@ export function NebulaBackground() {
         canvas.width = width;
         canvas.height = height;
 
-        const particles: Particle[] = [];
-        const particleCount = 150;
+        // Core colors based on brand: #2CDB9B (Turquoise) and #003327 (Dark Teal)
+        // Definiendo múltiples núcleos de nebulosa (clusters)
+        const numCores = 6;
+        const cores = Array.from({ length: numCores }, () => ({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            radius: 60 + Math.random() * 80, // Radios más pequeños
+            baseX: Math.random() * width,
+            baseY: Math.random() * height,
+            speedX: (Math.random() - 0.5) * 0.4,
+            speedY: (Math.random() - 0.5) * 0.4,
+            noisePhase: Math.random() * Math.PI * 2
+        }));
 
-        // Mouse interaction
+        const particles: Particle[] = [];
+        const particleCount = 250;
+
+        // Interacción del mouse muy sutil y lenta
         let mouseX = width / 2;
         let mouseY = height / 2;
         let targetX = width / 2;
@@ -44,42 +58,34 @@ export function NebulaBackground() {
         window.addEventListener('resize', handleResize);
 
         class Particle {
+            coreIndex: number;
             angle: number;
-            radius: number;
+            radiusOffset: number;
             speed: number;
             size: number;
-            color: string;
             alpha: number;
-            noiseOffsetX: number;
-            noiseOffsetY: number;
+            noise: number;
 
             constructor() {
+                this.coreIndex = Math.floor(Math.random() * cores.length);
                 this.angle = Math.random() * Math.PI * 2;
-                // Distribute particles mostly in a ring with some spread
-                this.radius = 150 + Math.random() * 100 - 50;
-                this.speed = 0 + Math.random() * 0.02;
-                this.size = Math.random() * 3 + 1;
+                // Partículas esparcidas alrededor de su núcleo
+                this.radiusOffset = (Math.random() - 0.5) * 180;
+                this.speed = (Math.random() - 0.5) * 0.005;
+                this.size = Math.random() * 2 + 0.5;
                 this.alpha = Math.random() * 0.5 + 0.1;
-
-                // Colors mostly blueish/cyan for the nebula effect
-                const hues = [200, 220, 180, 240];
-                const bgHue = hues[Math.floor(Math.random() * hues.length)];
-                this.color = `hsla(${bgHue}, 100%, 70%, `;
-
-                this.noiseOffsetX = Math.random() * 1000;
-                this.noiseOffsetY = Math.random() * 1000;
+                this.noise = Math.random() * 1000;
             }
 
-            update(centerX: number, centerY: number) {
+            update() {
                 this.angle += this.speed;
+                const core = cores[this.coreIndex];
 
-                // Slight pulsating effect
-                const pulse = Math.sin(Date.now() * 0.001 + this.noiseOffsetX) * 10;
-                const currentRadius = this.radius + pulse;
+                // Efecto de pulso orgánico
+                const currentRadius = core.radius + this.radiusOffset + Math.sin(Date.now() * 0.0005 + this.noise) * 10;
 
-                // Calculate position relative to center (which follows mouse)
-                const x = centerX + Math.cos(this.angle) * currentRadius;
-                const y = centerY + Math.sin(this.angle) * currentRadius;
+                const x = core.x + Math.cos(this.angle) * currentRadius;
+                const y = core.y + Math.sin(this.angle) * currentRadius;
 
                 this.draw(x, y);
             }
@@ -88,13 +94,14 @@ export function NebulaBackground() {
                 if (!ctx) return;
                 ctx.beginPath();
                 ctx.arc(x, y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = this.color + this.alpha + ')';
+
+                // Color turquesa de la marca: hsla(158, 72%, 52%)
+                ctx.fillStyle = `hsla(158, 72%, 52%, ${this.alpha})`;
                 ctx.fill();
 
-                // Add glow to some particles
-                if (this.size > 2) {
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = this.color + '1)';
+                if (this.size > 1.5) {
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = 'rgba(44, 219, 155, 0.6)';
                 } else {
                     ctx.shadowBlur = 0;
                 }
@@ -106,57 +113,74 @@ export function NebulaBackground() {
         }
 
         const render = () => {
-            // Smooth mouse following
-            mouseX += (targetX - mouseX) * 0.05;
-            mouseY += (targetY - mouseY) * 0.05;
+            // El seguimiento del mouse es extremadamente lento, casi imperceptible
+            // Solo para que los núcleos tengan una ligerísima tendencia hacia el ratón
+            mouseX += (targetX - mouseX) * 0.005;
+            mouseY += (targetY - mouseY) * 0.005;
 
-            // Clear canvas with a very dark blue/black fade for trail effect
-            ctx.fillStyle = 'rgba(5, 5, 10, 0.2)';
+            // Fondo muy oscuro con ligero tono verde militar profundo/negro
+            ctx.fillStyle = 'rgba(2, 6, 5, 0.2)';
             ctx.fillRect(0, 0, width, height);
 
-            // Draw center glow (the core of the nebula)
-            const gradient = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 250);
-            gradient.addColorStop(0, 'rgba(44, 219, 155, 0.15)'); // Brand turquoise subtle glow
-            gradient.addColorStop(0.4, 'rgba(30, 64, 175, 0.1)'); // Deep blue mid
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            // Actualizar y dibujar núcleos
+            cores.forEach((core) => {
+                // Movimiento autónomo (deriva)
+                core.baseX += core.speedX;
+                core.baseY += core.speedY;
 
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(mouseX, mouseY, 250, 0, Math.PI * 2);
-            ctx.fill();
+                // Rebote suave en los bordes extendidos
+                if (core.baseX < -200 || core.baseX > width + 200) core.speedX *= -1;
+                if (core.baseY < -200 || core.baseY > height + 200) core.speedY *= -1;
 
-            // Draw particles
-            particles.forEach(p => p.update(mouseX, mouseY));
+                // Atracción súper sutil al mouse
+                const dx = mouseX - core.baseX;
+                const dy = mouseY - core.baseY;
+                const dist = Math.hypot(dx, dy);
 
-            // Draw connection lines for inner sphere effect
-            ctx.lineWidth = 0.5;
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
+                // El núcleo real se mueve un poquito hacia el mouse
+                core.x = core.baseX + (dx / dist) * Math.min(dist, 50) * 0.05;
+                core.y = core.baseY + (dy / dist) * Math.min(dist, 50) * 0.05;
+
+                // Pulsación del núcleo
+                const dynamicRadius = core.radius + Math.sin(Date.now() * 0.001 + core.noisePhase) * 15;
+
+                // Brillo del núcleo (Verde Turquesa y Verde Oscuro)
+                const gradient = ctx.createRadialGradient(core.x, core.y, 0, core.x, core.y, dynamicRadius * 2);
+                gradient.addColorStop(0, 'rgba(44, 219, 155, 0.08)');  // Turquesa en el centro
+                gradient.addColorStop(0.3, 'rgba(0, 51, 39, 0.05)');  // Verde oscuro (#003327)
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(core.x, core.y, dynamicRadius * 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Dibujar partículas
+            particles.forEach(p => p.update());
+
+            // Dibujar conexiones tenues
+            ctx.lineWidth = 0.3;
+            for (let i = 0; i < particles.length; i += 2) {
+                for (let j = i + 1; j < particles.length; j += 3) {
                     const p1 = particles[i];
                     const p2 = particles[j];
 
-                    // Simple distance check without calculating exact position again
-                    // Approximation based on angle difference
-                    const angleDiff = Math.abs(p1.angle - p2.angle) % (Math.PI * 2);
-                    if (angleDiff < 0.2 || angleDiff > (Math.PI * 2 - 0.2)) {
-                        const pulse1 = Math.sin(Date.now() * 0.001 + p1.noiseOffsetX) * 10;
-                        const currentRadius1 = p1.radius + pulse1;
-                        const x1 = mouseX + Math.cos(p1.angle) * currentRadius1;
-                        const y1 = mouseY + Math.sin(p1.angle) * currentRadius1;
+                    const core1 = cores[p1.coreIndex];
+                    const core2 = cores[p2.coreIndex];
 
-                        const pulse2 = Math.sin(Date.now() * 0.001 + p2.noiseOffsetX) * 10;
-                        const currentRadius2 = p2.radius + pulse2;
-                        const x2 = mouseX + Math.cos(p2.angle) * currentRadius2;
-                        const y2 = mouseY + Math.sin(p2.angle) * currentRadius2;
+                    const x1 = core1.x + Math.cos(p1.angle) * (core1.radius + p1.radiusOffset);
+                    const y1 = core1.y + Math.sin(p1.angle) * (core1.radius + p1.radiusOffset);
+                    const x2 = core2.x + Math.cos(p2.angle) * (core2.radius + p2.radiusOffset);
+                    const y2 = core2.y + Math.sin(p2.angle) * (core2.radius + p2.radiusOffset);
 
-                        const dist = Math.hypot(x2 - x1, y2 - y1);
-                        if (dist < 80) {
-                            ctx.beginPath();
-                            ctx.moveTo(x1, y1);
-                            ctx.lineTo(x2, y2);
-                            ctx.strokeStyle = `rgba(100, 200, 255, ${0.15 - dist / 800})`;
-                            ctx.stroke();
-                        }
+                    const dist = Math.hypot(x2 - x1, y2 - y1);
+                    if (dist < 60) {
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.strokeStyle = `rgba(44, 219, 155, ${0.1 - dist / 600})`;
+                        ctx.stroke();
                     }
                 }
             }
