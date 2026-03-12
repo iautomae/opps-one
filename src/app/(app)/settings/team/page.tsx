@@ -66,6 +66,7 @@ const PLATFORM_TABS: Record<string, { label: string; tabs: { id: string; label: 
 interface TeamMember {
     id: string;
     email: string;
+    full_name: string | null;
     role: string;
     features: Record<string, boolean>;
     has_leads_access: boolean;
@@ -84,6 +85,7 @@ export default function TeamPage() {
 
     // Invite modal
     const [showInvite, setShowInvite] = useState(false);
+    const [inviteName, setInviteName] = useState("");
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviting, setInviting] = useState(false);
 
@@ -114,7 +116,7 @@ export default function TeamPage() {
         try {
             const { data, error } = await supabase
                 .from("profiles")
-                .select("id, email, role, features, has_leads_access")
+                .select("id, email, full_name, role, features, has_leads_access")
                 .eq("tenant_id", profile.tenant_id)
                 .neq("id", profile.id)
                 .order("created_at", { ascending: true });
@@ -124,6 +126,7 @@ export default function TeamPage() {
                 (data || []).map(d => ({
                     id: d.id,
                     email: d.email || "Sin email",
+                    full_name: d.full_name || null,
                     role: d.role || "client",
                     features: d.features || {},
                     has_leads_access: d.has_leads_access || false,
@@ -158,7 +161,7 @@ export default function TeamPage() {
                     "Content-Type": "application/json",
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
-                body: JSON.stringify({ email: inviteEmail.trim() }),
+                body: JSON.stringify({ email: inviteEmail.trim(), fullName: inviteName.trim() || null }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -166,10 +169,12 @@ export default function TeamPage() {
             setMembers(prev => [...prev, {
                 id: data.member.id,
                 email: data.member.email,
+                full_name: data.member.full_name || null,
                 role: "client",
                 features: {},
                 has_leads_access: false,
             }]);
+            setInviteName("");
             setInviteEmail("");
             setShowInvite(false);
             setToast({ message: "Invitación enviada correctamente.", type: "success" });
@@ -375,7 +380,12 @@ export default function TeamPage() {
                                             {member.email.charAt(0).toUpperCase()}
                                         </div>
                                         <div className="overflow-hidden flex-1">
-                                            <p className="text-sm font-bold text-gray-900 truncate">{member.email}</p>
+                                            <p className="text-sm font-bold text-gray-900 truncate">
+                                                {member.full_name || member.email}
+                                            </p>
+                                            {member.full_name && (
+                                                <p className="text-[11px] text-gray-400 truncate">{member.email}</p>
+                                            )}
                                             <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border inline-flex items-center gap-1 mt-1", summary.color)}>
                                                 <Shield size={8} />
                                                 {summary.label}
@@ -397,8 +407,13 @@ export default function TeamPage() {
                                                 {selectedMember.email.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                                <h3 className="text-lg font-bold text-gray-900">{selectedMember.email}</h3>
-                                                <p className="text-xs text-gray-500">Configura a qué plataformas y secciones tiene acceso.</p>
+                                                <h3 className="text-lg font-bold text-gray-900">
+                                                    {selectedMember.full_name || selectedMember.email}
+                                                </h3>
+                                                {selectedMember.full_name && (
+                                                    <p className="text-xs text-gray-400">{selectedMember.email}</p>
+                                                )}
+                                                <p className="text-xs text-gray-500 mt-0.5">Configura a qué plataformas y secciones tiene acceso.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -550,37 +565,54 @@ export default function TeamPage() {
                                 </div>
                             </div>
                             <button
-                                onClick={() => { setShowInvite(false); setInviteEmail(""); }}
+                                onClick={() => { setShowInvite(false); setInviteName(""); setInviteEmail(""); }}
                                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div className="p-6">
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                Correo Electrónico
-                            </label>
-                            <div className="relative">
-                                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="email"
-                                    value={inviteEmail}
-                                    onChange={e => setInviteEmail(e.target.value)}
-                                    onKeyDown={e => e.key === "Enter" && handleInvite()}
-                                    placeholder="correo@ejemplo.com"
-                                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
-                                    autoFocus
-                                />
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                    Nombre Completo
+                                </label>
+                                <div className="relative">
+                                    <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={inviteName}
+                                        onChange={e => setInviteName(e.target.value)}
+                                        placeholder="Ej: Juan Pérez"
+                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
+                                        autoFocus
+                                    />
+                                </div>
                             </div>
-                            <p className="text-[11px] text-gray-400 mt-2">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                    Correo Electrónico
+                                </label>
+                                <div className="relative">
+                                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="email"
+                                        value={inviteEmail}
+                                        onChange={e => setInviteEmail(e.target.value)}
+                                        onKeyDown={e => e.key === "Enter" && handleInvite()}
+                                        placeholder="correo@ejemplo.com"
+                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-gray-400">
                                 Después de invitar, podrás asignar plataformas y secciones desde el panel.
                             </p>
                         </div>
 
                         <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
                             <button
-                                onClick={() => { setShowInvite(false); setInviteEmail(""); }}
+                                onClick={() => { setShowInvite(false); setInviteName(""); setInviteEmail(""); }}
                                 className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition-colors"
                             >
                                 Cancelar

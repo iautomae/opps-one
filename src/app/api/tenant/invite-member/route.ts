@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
     try {
-        const { email } = await req.json();
+        const { email, fullName } = await req.json();
 
         if (!email || !email.trim()) {
             return NextResponse.json({ error: 'El correo es obligatorio.' }, { status: 400 });
@@ -94,16 +94,21 @@ export async function POST(req: Request) {
         const actionLink = verifyUrl.toString();
 
         // 3. Crear perfil vinculado al tenant (sin accesos, el owner los asigna después)
+        const profileData: Record<string, unknown> = {
+            id: userId,
+            email: email.trim(),
+            tenant_id: tenantId,
+            role: 'client',
+            has_leads_access: false,
+            features: {}
+        };
+        if (fullName && fullName.trim()) {
+            profileData.full_name = fullName.trim();
+        }
+
         const { error: profileError } = await supabaseAdmin
             .from('profiles')
-            .upsert({
-                id: userId,
-                email: email.trim(),
-                tenant_id: tenantId,
-                role: 'client',
-                has_leads_access: false,
-                features: {}
-            });
+            .upsert(profileData);
 
         if (profileError) {
             console.error('Error creating profile:', profileError);
@@ -121,7 +126,7 @@ export async function POST(req: Request) {
                             <h1 style="color: #2CDB9B; margin: 0; font-size: 28px;">Opps One</h1>
                         </div>
                         <div style="background-color: white; padding: 32px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                            <h2 style="color: #111827; margin-top: 0;">Te han invitado al equipo</h2>
+                            <h2 style="color: #111827; margin-top: 0;">${fullName ? `Hola ${fullName.trim()}, te` : 'Te'} han invitado al equipo</h2>
                             <p style="color: #4b5563; line-height: 1.6;">
                                 Has sido invitado a colaborar en el equipo de <strong>${companyName}</strong>.
                                 Crea tu contraseña para comenzar a usar la plataforma.
@@ -148,6 +153,7 @@ export async function POST(req: Request) {
             member: {
                 id: userId,
                 email: email.trim(),
+                full_name: fullName?.trim() || null,
                 role: 'client',
                 features: {},
                 has_leads_access: false
