@@ -250,10 +250,10 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
 
     if (!profile || profile.role !== "admin") return null;
 
-    // Separar "Propietario" del resto del equipo
-    const adminGeneral = tenantUsers.find(u => u.role === 'tenant_owner')
-        || tenantUsers.find(u => u.role === 'admin' && u.id !== profile?.id);
-    const teamMembers = tenantUsers.filter(u => u !== adminGeneral);
+    // Separar propietarios (puede haber co-owners) del resto del equipo
+    const tenantOwners = tenantUsers.filter(u => u.role === 'tenant_owner' || (u.role === 'admin' && u.id !== profile?.id));
+    const adminGeneral = tenantOwners[0] || null; // Primary owner for platform toggles
+    const teamMembers = tenantUsers.filter(u => !tenantOwners.includes(u));
 
     const getAccessIndicator = (user: ClientProfile) => {
         let totalFeatures = AVAILABLE_FEATURES.length;
@@ -315,60 +315,71 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
                         </button>
                     </div>
                 </div>      <div className="space-y-6">
-                    {/* Tarjeta del ADMIN GENERAL (Compacta) */}
-                    {adminGeneral && (
+                    {/* Tarjeta de PROPIETARIOS (puede haber co-owners) */}
+                    {tenantOwners.length > 0 && (
                         <div>
-                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Administrador General</h2>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm relative group">
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500"></div>
+                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                                {tenantOwners.length > 1 ? 'Propietarios' : 'Administrador General'}
+                            </h2>
+                            <div className="space-y-2">
+                                {tenantOwners.map((owner, idx) => (
+                                    <div key={owner.id} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm relative group">
+                                        <div className={cn("absolute left-0 top-0 bottom-0 w-1", idx === 0 ? "bg-purple-500" : "bg-purple-300")}></div>
 
-                                <div className="flex items-center justify-between pl-2">
-                                    {/* Left: Admin Info */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 font-bold shrink-0 text-lg">
-                                            {(adminGeneral.email || '?').charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-900 truncate max-w-[250px]">{adminGeneral.email}</p>
-                                            <span className="text-[10px] font-bold text-gray-500 uppercase">
-                                                Propietario
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Right: Compact Platform Toggles */}
-                                    <div className="flex items-center gap-1.5">
-                                        {dbPlatforms.map((platform) => {
-                                            const featureKey = platform.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
-                                            const isActive = !!adminGeneral.features?.[featureKey];
-                                            const isToggling = isTogglingPlatform === featureKey;
-                                            const IconComp = getIconComponent(platform.icon);
-                                            const colors = getColorClasses(platform.color);
-
-                                            return (
-                                                <button
-                                                    key={platform.id}
-                                                    onClick={() => togglePlatformAccess(platform.name)}
-                                                    disabled={isToggling}
-                                                    className={cn(
-                                                        "w-[30px] h-[30px] rounded-lg flex items-center justify-center border transition-all relative group/tip",
-                                                        isActive
-                                                            ? `${colors.bg} ${colors.border} ${colors.text}`
-                                                            : "bg-gray-50 border-gray-200 text-gray-300 hover:text-gray-400 hover:border-gray-300"
-                                                    )}
-                                                >
-                                                    {isToggling
-                                                        ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
-                                                        : <IconComp size={14} />
-                                                    }
-                                                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                                                        {platform.name}
+                                        <div className="flex items-center justify-between pl-2">
+                                            {/* Left: Owner Info */}
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-xl border flex items-center justify-center font-bold shrink-0 text-lg",
+                                                    idx === 0 ? "bg-purple-50 border-purple-100 text-purple-600" : "bg-purple-50/50 border-purple-100/50 text-purple-400"
+                                                )}>
+                                                    {(owner.email || '?').charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900 truncate max-w-[250px]">{owner.email}</p>
+                                                    <span className="text-[10px] font-bold text-gray-500 uppercase">
+                                                        {idx === 0 ? 'Propietario' : 'Co-Propietario'}
                                                     </span>
-                                                </button>
-                                            );
-                                        })}
+                                                </div>
+                                            </div>
+
+                                            {/* Right: Platform Toggles (only for primary owner) */}
+                                            {idx === 0 && (
+                                                <div className="flex items-center gap-1.5">
+                                                    {dbPlatforms.map((platform) => {
+                                                        const featureKey = platform.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+                                                        const isActive = !!owner.features?.[featureKey];
+                                                        const isToggling = isTogglingPlatform === featureKey;
+                                                        const IconComp = getIconComponent(platform.icon);
+                                                        const colors = getColorClasses(platform.color);
+
+                                                        return (
+                                                            <button
+                                                                key={platform.id}
+                                                                onClick={() => togglePlatformAccess(platform.name)}
+                                                                disabled={isToggling}
+                                                                className={cn(
+                                                                    "w-[30px] h-[30px] rounded-lg flex items-center justify-center border transition-all relative group/tip",
+                                                                    isActive
+                                                                        ? `${colors.bg} ${colors.border} ${colors.text}`
+                                                                        : "bg-gray-50 border-gray-200 text-gray-300 hover:text-gray-400 hover:border-gray-300"
+                                                                )}
+                                                            >
+                                                                {isToggling
+                                                                    ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                                                                    : <IconComp size={14} />
+                                                                }
+                                                                <span className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                                                    {platform.name}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     )}

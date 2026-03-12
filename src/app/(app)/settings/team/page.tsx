@@ -6,7 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useRouter } from "next/navigation";
 import {
     Users, UserPlus, X, LoaderCircle, CheckCircle2, AlertCircle,
-    ChevronDown, ChevronRight, Shield, Mail, Search
+    ChevronDown, ChevronRight, Shield, Mail, Search, Crown, UserMinus
 } from "lucide-react";
 import { usePlatforms, getIconComponent, getColorClasses } from "@/hooks/usePlatforms";
 import { clsx, type ClassValue } from "clsx";
@@ -89,6 +89,9 @@ export default function TeamPage() {
     const [inviteName, setInviteName] = useState("");
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviting, setInviting] = useState(false);
+
+    // Role change
+    const [changingRole, setChangingRole] = useState(false);
 
     // Toast
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -175,6 +178,38 @@ export default function TeamPage() {
             setToast({ message: err.message || "Error al invitar.", type: "error" });
         } finally {
             setInviting(false);
+        }
+    };
+
+    // ── Change role (promote/demote co-owner) ──
+    const handleChangeRole = async (memberId: string, newRole: "tenant_owner" | "client") => {
+        setChangingRole(true);
+        try {
+            const token = (await supabase.auth.getSession()).data.session?.access_token;
+            const res = await fetch("/api/tenant/change-role", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ memberId, newRole }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            setMembers(prev =>
+                prev.map(m => m.id === memberId ? { ...m, role: newRole } : m)
+            );
+            setToast({
+                message: newRole === "tenant_owner"
+                    ? "Miembro promovido a Co-Propietario."
+                    : "Miembro degradado a Empleado.",
+                type: "success",
+            });
+        } catch (err: any) {
+            setToast({ message: err.message || "Error al cambiar rol.", type: "error" });
+        } finally {
+            setChangingRole(false);
         }
     };
 
@@ -381,6 +416,12 @@ export default function TeamPage() {
                                                     <CheckCircle2 size={8} />
                                                     {member.status === "active" ? "Activo" : "Pendiente"}
                                                 </span>
+                                                {member.role === "tenant_owner" && (
+                                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border inline-flex items-center gap-1 text-purple-600 bg-purple-50 border-purple-200">
+                                                        <Crown size={8} />
+                                                        Co-Propietario
+                                                    </span>
+                                                )}
                                                 <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border inline-flex items-center gap-1", summary.color)}>
                                                     <Shield size={8} />
                                                     {summary.label}
@@ -422,6 +463,35 @@ export default function TeamPage() {
                                                 )}
                                                 <p className="text-xs text-gray-500 mt-0.5">Configura a qué plataformas y secciones tiene acceso.</p>
                                             </div>
+                                        </div>
+
+                                        {/* Role change button */}
+                                        <div className="mt-3 flex items-center gap-2">
+                                            {selectedMember.role === "tenant_owner" ? (
+                                                <button
+                                                    onClick={() => handleChangeRole(selectedMember.id, "client")}
+                                                    disabled={changingRole}
+                                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-all disabled:opacity-50"
+                                                >
+                                                    {changingRole ? <LoaderCircle size={14} className="animate-spin" /> : <UserMinus size={14} />}
+                                                    Degradar a Empleado
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleChangeRole(selectedMember.id, "tenant_owner")}
+                                                    disabled={changingRole}
+                                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all disabled:opacity-50"
+                                                >
+                                                    {changingRole ? <LoaderCircle size={14} className="animate-spin" /> : <Crown size={14} />}
+                                                    Promover a Co-Propietario
+                                                </button>
+                                            )}
+                                            {selectedMember.role === "tenant_owner" && (
+                                                <span className="text-[10px] font-bold text-purple-500 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                                                    <Crown size={10} />
+                                                    Co-Propietario
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
