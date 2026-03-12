@@ -117,77 +117,27 @@ export default function DynamicLeadsDashboard() {
 
     const fetchLeads = React.useCallback(async () => {
         if (!activeAgentId) {
-            if (view === 'LEADS' && !isClient) setView('GALLERY');
+            if (view === 'LEADS' && !isClient && !isTenantOwner) setView('GALLERY');
             return;
         }
 
         let leadData, error;
-        const isImpersonating = isAdmin && viewAsUid;
 
-        if (isImpersonating) {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const res = await fetch(`/api/admin/impersonate/leads?user_id=${targetUid}&agent_id=${activeAgentId}`, {
-                    headers: { 'Authorization': `Bearer ${session?.access_token}` }
-                });
-                if (res.ok) {
-                    const json = await res.json();
-                    leadData = json.leads;
-                } else {
-                    const errJson = await res.json();
-                    error = errJson.error;
-                }
-            } catch (e: unknown) {
-                error = e instanceof Error ? e.message : String(e);
-            }
-        } else if (isClient) {
-            // Client: filter leads by visible advisor slots
-            // We need to resolve advisor slot numbers → profile_ids from the agent
-            const agent = agents.find(a => a.id === activeAgentId);
-            if (!agent) return;
-
-            if (leadsVisibleAdvisors === 'all') {
-                // See all leads for this agent
-                const result = await supabase
-                    .from('leads')
-                    .select('*')
-                    .eq('agent_id', activeAgentId)
-                    .order('created_at', { ascending: false });
-                leadData = result.data;
-                error = result.error;
+        // Use server-side API to bypass RLS — handles role-based filtering server-side
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/leads/fetch?agent_id=${activeAgentId}`, {
+                headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+            });
+            if (res.ok) {
+                const json = await res.json();
+                leadData = json.leads;
             } else {
-                // Resolve slot numbers to profile_ids
-                const visibleProfileIds: string[] = [];
-                for (const slot of leadsVisibleAdvisors) {
-                    const profileId = slot === 1 ? agent.pushover_user_1_profile_id
-                        : slot === 2 ? agent.pushover_user_2_profile_id
-                        : slot === 3 ? agent.pushover_user_3_profile_id
-                        : null;
-                    if (profileId) visibleProfileIds.push(profileId);
-                }
-
-                if (visibleProfileIds.length === 0) {
-                    leadData = [];
-                } else {
-                    const result = await supabase
-                        .from('leads')
-                        .select('*')
-                        .eq('agent_id', activeAgentId)
-                        .in('assigned_profile_id', visibleProfileIds)
-                        .order('created_at', { ascending: false });
-                    leadData = result.data;
-                    error = result.error;
-                }
+                const errJson = await res.json();
+                error = errJson.error;
             }
-        } else {
-            // Tenant owner: show all leads for this agent (including shared/admin agents)
-            const result = await supabase
-                .from('leads')
-                .select('*')
-                .eq('agent_id', activeAgentId)
-                .order('created_at', { ascending: false });
-            leadData = result.data;
-            error = result.error;
+        } catch (e: unknown) {
+            error = e instanceof Error ? e.message : String(e);
         }
 
         if (leadData && !error) {
@@ -230,7 +180,7 @@ export default function DynamicLeadsDashboard() {
             console.error('Error fetching leads:', error);
         }
         // setIsLoadingLeads(false);
-    }, [activeAgentId, view, isAdmin, isClient, viewAsUid, targetUid, agents, leadsVisibleAdvisors]);
+    }, [activeAgentId, view, isClient, isTenantOwner]);
 
     // Side Panel State
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -266,8 +216,7 @@ export default function DynamicLeadsDashboard() {
             const isAvailable = agents.some(a => a.id === activeAgentId);
             if (!isAvailable) {
                 console.warn('Attempted access to unavailable agent:', activeAgentId);
-                if (isClient && agents.length > 0) {
-                    // Client: re-select first agent
+                if ((isClient || isTenantOwner) && agents.length > 0) {
                     setActiveAgentId(agents[0].id);
                 } else {
                     setActiveAgentId(null);
@@ -275,7 +224,7 @@ export default function DynamicLeadsDashboard() {
                 }
             }
         }
-    }, [activeAgentId, agents, isLoading, isClient]);
+    }, [activeAgentId, agents, isLoading, isClient, isTenantOwner]);
 
     // Fetch leads effect with realtime subscription
     React.useEffect(() => {
@@ -361,8 +310,8 @@ export default function DynamicLeadsDashboard() {
 
             if (data && !error) {
                 setAgents(data);
-                // Auto-select first agent and skip to LEADS for clients
-                if (isClient && data.length > 0) {
+                // Auto-select first agent and skip to LEADS for clients and tenant_owners
+                if ((isClient || isTenantOwner) && data.length > 0) {
                     setActiveAgentId(data[0].id);
                     setView('LEADS');
                 }
@@ -1130,8 +1079,8 @@ export default function DynamicLeadsDashboard() {
                 <div className="flex items-center justify-between mb-8 shrink-0">
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
-                            {/* Back Button - Only show in LEADS view for non-clients */}
-                            {view === 'LEADS' && !isClient && (
+                            {/* Back Button - Only show in LEADS view for admin */}
+                            {view === 'LEADS' && !isClient && !isTenantOwner && (
                                 <button
                                     onClick={() => setView('GALLERY')}
                                     className="mr-2 p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
@@ -1164,7 +1113,7 @@ export default function DynamicLeadsDashboard() {
                                         Panel de {editableCompany}
                                     </h1>
                                 )}
-                                {!isClient && (
+                                {!isClient && !isTenantOwner && (
                                     <button
                                         onClick={() => setIsEditingTitle(!isEditingTitle)}
                                         className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-300 hover:text-brand-primary transition-all opacity-0 group-hover:opacity-100"
@@ -1175,11 +1124,43 @@ export default function DynamicLeadsDashboard() {
                             </div>
                         </div>
                         <p className="text-gray-500 text-sm font-medium ml-1">
-                            {isClient ? "Mis Leads" : (view === 'GALLERY' ? "Gestión de Agentes de IA" : "Gestión de Leads")}
+                            {isClient ? "Mis Leads" : isTenantOwner ? "Gestión de Leads" : (view === 'GALLERY' ? "Gestión de Agentes de IA" : "Gestión de Leads")}
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        {isClient ? null : view === 'GALLERY' ? (
+                        {isClient ? null : isTenantOwner ? (
+                            /* Tenant owner: show agent config + notifications buttons */
+                            <>
+                                {activeAgentId && (
+                                    <Link
+                                        href={`/leads/agent-config?id=${activeAgentId}`}
+                                        className="px-5 py-2.5 border border-gray-200 bg-white rounded-xl text-xs font-bold text-gray-700 hover:border-brand-primary hover:text-brand-primary transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 shadow-sm"
+                                    >
+                                        <Settings size={16} />
+                                        Configurar Agente
+                                    </Link>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        const agentToConfig = agents.find(a => a.id === activeAgentId);
+                                        if (agentToConfig) {
+                                            handleOpenPushover(agentToConfig);
+                                        } else {
+                                            setInfoModal({ isOpen: true, type: 'error', message: 'No hay agentes para configurar.' });
+                                        }
+                                    }}
+                                    className={cn(
+                                        "px-5 py-2.5 border rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 shadow-sm",
+                                        isPushoverConfigured(activeAgentId)
+                                            ? "bg-brand-primary/10 border-brand-primary text-brand-primary"
+                                            : "bg-white border-gray-200 text-gray-700 hover:border-brand-primary hover:text-brand-primary"
+                                    )}
+                                >
+                                    <Bell size={16} />
+                                    Notificaciones {isPushoverConfigured(activeAgentId) && <Check size={14} className="ml-1" />}
+                                </button>
+                            </>
+                        ) : view === 'GALLERY' ? (
                             <button
                                 onClick={handleOpenCreateModal}
                                 className="px-6 py-2.5 bg-brand-primary text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-brand-primary/20 hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
@@ -1190,7 +1171,6 @@ export default function DynamicLeadsDashboard() {
                         ) : (
                             <button
                                 onClick={() => {
-                                    // Select active agent
                                     const agentToConfig = agents.find(a => a.id === activeAgentId);
                                     if (agentToConfig) {
                                         handleOpenPushover(agentToConfig);
@@ -1213,7 +1193,7 @@ export default function DynamicLeadsDashboard() {
                 </div>
 
                 {
-                    view === 'GALLERY' && !isClient ? (
+                    view === 'GALLERY' && !isClient && !isTenantOwner ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {agents.map(agent => (
                                 <div key={agent.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all group relative overflow-visible flex flex-col justify-between min-h-[220px]">
@@ -1318,7 +1298,7 @@ export default function DynamicLeadsDashboard() {
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-brand-mint">Nuevo Agente</span>
                             </div>
                         </div>
-                    ) : isClient && isLoading ? (
+                    ) : (isClient || isTenantOwner) && isLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center space-y-4">
                             <div className="w-10 h-10 border-4 border-brand-mint border-t-transparent rounded-full animate-spin" />
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cargando Leads...</p>
