@@ -49,16 +49,19 @@ interface Agent {
     pushover_user_1_token?: string;
     pushover_user_1_active?: boolean;
     pushover_user_1_template?: string;
+    pushover_user_1_profile_id?: string;
     pushover_user_2_name?: string;
     pushover_user_2_key?: string;
     pushover_user_2_token?: string;
     pushover_user_2_active?: boolean;
     pushover_user_2_template?: string;
+    pushover_user_2_profile_id?: string;
     pushover_user_3_name?: string;
     pushover_user_3_key?: string;
     pushover_user_3_token?: string;
     pushover_user_3_active?: boolean;
     pushover_user_3_template?: string;
+    pushover_user_3_profile_id?: string;
     pushover_template?: string;
     pushover_title?: string;
     pushover_reply_message?: string;
@@ -134,12 +137,26 @@ export default function DynamicLeadsDashboard() {
                 error = e instanceof Error ? e.message : String(e);
             }
         } else {
-            const result = await supabase
+            // If user is a team member (client), only show leads assigned to them
+            // If user is tenant_owner, show all leads for this agent
+            const isTeamMember = profile?.role === 'client';
+            let query = supabase
                 .from('leads')
                 .select('*')
-                .eq('agent_id', activeAgentId) // Filter by active agent
-                .eq('user_id', targetUid)         // STRICT: Filter by target user
+                .eq('agent_id', activeAgentId)
+                .eq('user_id', targetUid)
                 .order('created_at', { ascending: false });
+
+            if (isTeamMember && profile?.id) {
+                query = supabase
+                    .from('leads')
+                    .select('*')
+                    .eq('agent_id', activeAgentId)
+                    .eq('assigned_profile_id', profile.id)
+                    .order('created_at', { ascending: false });
+            }
+
+            const result = await query;
             leadData = result.data;
             error = result.error;
         }
@@ -406,6 +423,7 @@ export default function DynamicLeadsDashboard() {
     const [pushoverUser1Title, setPushoverUser1Title] = useState('');
     const [pushoverUser1Filter, setPushoverUser1Filter] = useState<'ALL' | 'POTENTIAL_ONLY' | 'NO_POTENTIAL_ONLY'>('ALL');
     const [pushoverUser1TestPhone, setPushoverUser1TestPhone] = useState('');
+    const [pushoverUser1ProfileId, setPushoverUser1ProfileId] = useState('');
 
     const [pushoverUser2Name, setPushoverUser2Name] = useState('');
     const [pushoverUser2Key, setPushoverUser2Key] = useState('');
@@ -415,6 +433,7 @@ export default function DynamicLeadsDashboard() {
     const [pushoverUser2Title, setPushoverUser2Title] = useState('');
     const [pushoverUser2Filter, setPushoverUser2Filter] = useState<'ALL' | 'POTENTIAL_ONLY' | 'NO_POTENTIAL_ONLY'>('ALL');
     const [pushoverUser2TestPhone, setPushoverUser2TestPhone] = useState('');
+    const [pushoverUser2ProfileId, setPushoverUser2ProfileId] = useState('');
 
     const [pushoverUser3Name, setPushoverUser3Name] = useState('');
     const [pushoverUser3Key, setPushoverUser3Key] = useState('');
@@ -424,6 +443,10 @@ export default function DynamicLeadsDashboard() {
     const [pushoverUser3Title, setPushoverUser3Title] = useState('');
     const [pushoverUser3Filter, setPushoverUser3Filter] = useState<'ALL' | 'POTENTIAL_ONLY' | 'NO_POTENTIAL_ONLY'>('ALL');
     const [pushoverUser3TestPhone, setPushoverUser3TestPhone] = useState('');
+    const [pushoverUser3ProfileId, setPushoverUser3ProfileId] = useState('');
+
+    // Team members for advisor linking
+    const [teamMembers, setTeamMembers] = useState<{ id: string; email: string; full_name: string | null }[]>([]);
 
     // Shared UI UI States for Pushover Modal
     const [pushoverReplyMessage, setPushoverReplyMessage] = useState('');
@@ -524,16 +547,33 @@ export default function DynamicLeadsDashboard() {
         setPushoverUser1Title(a.pushover_user_1_title || '');
         setPushoverUser1Filter(a.pushover_user_1_notification_filter || 'ALL');
         setPushoverUser1TestPhone(a.pushover_user_1_test_phone || '');
+        setPushoverUser1ProfileId(a.pushover_user_1_profile_id || '');
 
         setPushoverUser2Template(a.pushover_user_2_template || '');
         setPushoverUser2Title(a.pushover_user_2_title || '');
         setPushoverUser2Filter(a.pushover_user_2_notification_filter || 'ALL');
         setPushoverUser2TestPhone(a.pushover_user_2_test_phone || '');
+        setPushoverUser2ProfileId(a.pushover_user_2_profile_id || '');
 
         setPushoverUser3Template(a.pushover_user_3_template || '');
         setPushoverUser3Title(a.pushover_user_3_title || '');
         setPushoverUser3Filter(a.pushover_user_3_notification_filter || 'ALL');
         setPushoverUser3TestPhone(a.pushover_user_3_test_phone || '');
+        setPushoverUser3ProfileId(a.pushover_user_3_profile_id || '');
+
+        // Fetch team members for the advisor-linking dropdown
+        (async () => {
+            try {
+                const token = (await supabase.auth.getSession()).data.session?.access_token;
+                const res = await fetch('/api/tenant/team', {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setTeamMembers(data.members || []);
+                }
+            } catch { /* ignore - dropdown will just be empty */ }
+        })();
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const initialReply = a.pushover_reply_message ||
@@ -561,6 +601,7 @@ export default function DynamicLeadsDashboard() {
                 pushover_user_1_title: pushoverUser1Title,
                 pushover_user_1_notification_filter: pushoverUser1Filter,
                 pushover_user_1_test_phone: pushoverUser1TestPhone,
+                pushover_user_1_profile_id: pushoverUser1ProfileId || null,
 
                 pushover_user_2_name: pushoverUser2Name,
                 pushover_user_2_key: pushoverUser2Key,
@@ -570,6 +611,7 @@ export default function DynamicLeadsDashboard() {
                 pushover_user_2_title: pushoverUser2Title,
                 pushover_user_2_notification_filter: pushoverUser2Filter,
                 pushover_user_2_test_phone: pushoverUser2TestPhone,
+                pushover_user_2_profile_id: pushoverUser2ProfileId || null,
 
                 pushover_user_3_name: pushoverUser3Name,
                 pushover_user_3_key: pushoverUser3Key,
@@ -579,6 +621,7 @@ export default function DynamicLeadsDashboard() {
                 pushover_user_3_title: pushoverUser3Title,
                 pushover_user_3_notification_filter: pushoverUser3Filter,
                 pushover_user_3_test_phone: pushoverUser3TestPhone,
+                pushover_user_3_profile_id: pushoverUser3ProfileId || null,
 
                 pushover_template: generatedPushoverTemplate,
                 pushover_title: pushoverTitle,
@@ -1996,6 +2039,30 @@ export default function DynamicLeadsDashboard() {
                                                                     className="w-full bg-white border border-gray-200 rounded-xl py-3 px-5 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none text-sm text-gray-900 font-bold placeholder:text-gray-300 transition-all shadow-sm"
                                                                 />
                                                             </div>
+
+                                                            {/* Team Member Link - Links this advisor slot to a team member for lead distribution */}
+                                                            {teamMembers.length > 0 && (
+                                                                <div className="space-y-3 bg-purple-50/50 p-4 rounded-2xl border border-purple-100">
+                                                                    <label className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Vincular a Miembro del Equipo</label>
+                                                                    <p className="text-[9px] text-gray-400 font-medium -mt-1">Los leads asignados a este asesor aparecerán en el panel del miembro seleccionado.</p>
+                                                                    <select
+                                                                        value={activeAdvisorTab === 1 ? pushoverUser1ProfileId : activeAdvisorTab === 2 ? pushoverUser2ProfileId : pushoverUser3ProfileId}
+                                                                        onChange={(e) => {
+                                                                            if (activeAdvisorTab === 1) setPushoverUser1ProfileId(e.target.value);
+                                                                            else if (activeAdvisorTab === 2) setPushoverUser2ProfileId(e.target.value);
+                                                                            else setPushoverUser3ProfileId(e.target.value);
+                                                                        }}
+                                                                        className="w-full bg-white border border-gray-200 rounded-xl py-3 px-5 focus:ring-2 focus:ring-purple-300/30 focus:border-purple-300 outline-none text-sm text-gray-900 font-bold transition-all shadow-sm"
+                                                                    >
+                                                                        <option value="">Sin vincular (solo propietario)</option>
+                                                                        {teamMembers.map(m => (
+                                                                            <option key={m.id} value={m.id}>
+                                                                                {m.full_name || m.email}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            )}
 
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div className="space-y-3 bg-brand-primary/5 p-4 rounded-2xl border border-brand-primary/10">

@@ -25,6 +25,7 @@ export async function POST(request: Request) {
         pushover_user_1_template: string | null;
         pushover_user_1_title: string | null;
         pushover_user_1_notification_filter: 'ALL' | 'POTENTIAL_ONLY' | 'NO_POTENTIAL_ONLY' | null;
+        pushover_user_1_profile_id: string | null;
         pushover_user_2_name: string | null;
         pushover_user_2_key: string | null;
         pushover_user_2_token: string | null;
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
         pushover_user_2_template: string | null;
         pushover_user_2_title: string | null;
         pushover_user_2_notification_filter: 'ALL' | 'POTENTIAL_ONLY' | 'NO_POTENTIAL_ONLY' | null;
+        pushover_user_2_profile_id: string | null;
         pushover_user_3_name: string | null;
         pushover_user_3_key: string | null;
         pushover_user_3_token: string | null;
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
         pushover_user_3_template: string | null;
         pushover_user_3_title: string | null;
         pushover_user_3_notification_filter: 'ALL' | 'POTENTIAL_ONLY' | 'NO_POTENTIAL_ONLY' | null;
+        pushover_user_3_profile_id: string | null;
         pushover_template: string | null;
         pushover_title: string | null;
         pushover_notification_filter: 'ALL' | 'POTENTIAL_ONLY' | 'NO_POTENTIAL_ONLY' | null;
@@ -98,11 +101,11 @@ export async function POST(request: Request) {
         const { data: agentData, error: agentError } = await supabase
             .from('agentes')
             .select(`
-                id, 
-                user_id, 
-                pushover_user_1_name, pushover_user_1_key, pushover_user_1_token, pushover_user_1_active, pushover_user_1_template, pushover_user_1_title, pushover_user_1_notification_filter,
-                pushover_user_2_name, pushover_user_2_key, pushover_user_2_token, pushover_user_2_active, pushover_user_2_template, pushover_user_2_title, pushover_user_2_notification_filter,
-                pushover_user_3_name, pushover_user_3_key, pushover_user_3_token, pushover_user_3_active, pushover_user_3_template, pushover_user_3_title, pushover_user_3_notification_filter,
+                id,
+                user_id,
+                pushover_user_1_name, pushover_user_1_key, pushover_user_1_token, pushover_user_1_active, pushover_user_1_template, pushover_user_1_title, pushover_user_1_notification_filter, pushover_user_1_profile_id,
+                pushover_user_2_name, pushover_user_2_key, pushover_user_2_token, pushover_user_2_active, pushover_user_2_template, pushover_user_2_title, pushover_user_2_notification_filter, pushover_user_2_profile_id,
+                pushover_user_3_name, pushover_user_3_key, pushover_user_3_token, pushover_user_3_active, pushover_user_3_template, pushover_user_3_title, pushover_user_3_notification_filter, pushover_user_3_profile_id,
                 pushover_template, pushover_title, pushover_notification_filter, pushover_reply_message, make_webhook_url, token_multiplier, status
             `)
             .eq('eleven_labs_agent_id', elAgentId)
@@ -260,6 +263,7 @@ export async function POST(request: Request) {
 
         // 4. Randomized Pushover Notification & Advisor Selection
         let selectedAdvisorName: string | null = null;
+        let selectedProfileId: string | null = null;
 
         if (finalAgent.status === 'active' && (finalAgent.pushover_user_1_key || finalAgent.pushover_user_2_key || finalAgent.pushover_user_3_key)) {
             // Collect eligible users based on their INDEPENDENT filters
@@ -271,7 +275,8 @@ export async function POST(request: Request) {
                     active: finalAgent.pushover_user_1_active ?? true,
                     template: finalAgent.pushover_user_1_template,
                     title: finalAgent.pushover_user_1_title,
-                    filter: finalAgent.pushover_user_1_notification_filter || finalAgent.pushover_notification_filter || 'ALL'
+                    filter: finalAgent.pushover_user_1_notification_filter || finalAgent.pushover_notification_filter || 'ALL',
+                    profile_id: finalAgent.pushover_user_1_profile_id
                 },
                 {
                     name: finalAgent.pushover_user_2_name,
@@ -280,7 +285,8 @@ export async function POST(request: Request) {
                     active: finalAgent.pushover_user_2_active ?? true,
                     template: finalAgent.pushover_user_2_template,
                     title: finalAgent.pushover_user_2_title,
-                    filter: finalAgent.pushover_user_2_notification_filter || finalAgent.pushover_notification_filter || 'ALL'
+                    filter: finalAgent.pushover_user_2_notification_filter || finalAgent.pushover_notification_filter || 'ALL',
+                    profile_id: finalAgent.pushover_user_2_profile_id
                 },
                 {
                     name: finalAgent.pushover_user_3_name,
@@ -289,7 +295,8 @@ export async function POST(request: Request) {
                     active: finalAgent.pushover_user_3_active ?? true,
                     template: finalAgent.pushover_user_3_template,
                     title: finalAgent.pushover_user_3_title,
-                    filter: finalAgent.pushover_user_3_notification_filter || finalAgent.pushover_notification_filter || 'ALL'
+                    filter: finalAgent.pushover_user_3_notification_filter || finalAgent.pushover_notification_filter || 'ALL',
+                    profile_id: finalAgent.pushover_user_3_profile_id
                 }
             ].filter(u => {
                 const hasCreds = u.key && u.key.trim() !== '' && u.token && u.token.trim() !== '';
@@ -309,6 +316,7 @@ export async function POST(request: Request) {
                 // Select random advisor from eligible ones
                 const luckyUser = eligibleUsers[Math.floor(Math.random() * eligibleUsers.length)];
                 selectedAdvisorName = luckyUser.name || 'Asesor Asignado';
+                selectedProfileId = luckyUser.profile_id || null;
 
                 // Use advisor specific title if available, fallback to agent title, fallback to default
                 const messageTitle = luckyUser.title || finalAgent.pushover_title || 'Nuevo Lead Detectado';
@@ -429,7 +437,8 @@ export async function POST(request: Request) {
                 phone: phoneVal,
                 tokens_raw: Math.round(tokensRaw),
                 tokens_billed: tokensBilled,
-                advisor_name: selectedAdvisorName
+                advisor_name: selectedAdvisorName,
+                assigned_profile_id: selectedProfileId
             });
 
         if (insertError) {

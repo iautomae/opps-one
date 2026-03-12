@@ -36,6 +36,7 @@ export type Database = {
           pushover_user_1_key: string | null
           pushover_user_1_name: string | null
           pushover_user_1_notification_filter: string | null
+          pushover_user_1_profile_id: string | null
           pushover_user_1_template: string | null
           pushover_user_1_test_phone: string | null
           pushover_user_1_title: string | null
@@ -45,6 +46,7 @@ export type Database = {
           pushover_user_2_key: string | null
           pushover_user_2_name: string | null
           pushover_user_2_notification_filter: string | null
+          pushover_user_2_profile_id: string | null
           pushover_user_2_template: string | null
           pushover_user_2_test_phone: string | null
           pushover_user_2_title: string | null
@@ -54,6 +56,7 @@ export type Database = {
           pushover_user_3_key: string | null
           pushover_user_3_name: string | null
           pushover_user_3_notification_filter: string | null
+          pushover_user_3_profile_id: string | null
           pushover_user_3_template: string | null
           pushover_user_3_test_phone: string | null
           pushover_user_3_title: string | null
@@ -84,6 +87,7 @@ export type Database = {
           pushover_user_1_key?: string | null
           pushover_user_1_name?: string | null
           pushover_user_1_notification_filter?: string | null
+          pushover_user_1_profile_id?: string | null
           pushover_user_1_template?: string | null
           pushover_user_1_test_phone?: string | null
           pushover_user_1_title?: string | null
@@ -93,6 +97,7 @@ export type Database = {
           pushover_user_2_key?: string | null
           pushover_user_2_name?: string | null
           pushover_user_2_notification_filter?: string | null
+          pushover_user_2_profile_id?: string | null
           pushover_user_2_template?: string | null
           pushover_user_2_test_phone?: string | null
           pushover_user_2_title?: string | null
@@ -102,6 +107,7 @@ export type Database = {
           pushover_user_3_key?: string | null
           pushover_user_3_name?: string | null
           pushover_user_3_notification_filter?: string | null
+          pushover_user_3_profile_id?: string | null
           pushover_user_3_template?: string | null
           pushover_user_3_test_phone?: string | null
           pushover_user_3_title?: string | null
@@ -132,6 +138,7 @@ export type Database = {
           pushover_user_1_key?: string | null
           pushover_user_1_name?: string | null
           pushover_user_1_notification_filter?: string | null
+          pushover_user_1_profile_id?: string | null
           pushover_user_1_template?: string | null
           pushover_user_1_test_phone?: string | null
           pushover_user_1_title?: string | null
@@ -141,6 +148,7 @@ export type Database = {
           pushover_user_2_key?: string | null
           pushover_user_2_name?: string | null
           pushover_user_2_notification_filter?: string | null
+          pushover_user_2_profile_id?: string | null
           pushover_user_2_template?: string | null
           pushover_user_2_test_phone?: string | null
           pushover_user_2_title?: string | null
@@ -150,6 +158,7 @@ export type Database = {
           pushover_user_3_key?: string | null
           pushover_user_3_name?: string | null
           pushover_user_3_notification_filter?: string | null
+          pushover_user_3_profile_id?: string | null
           pushover_user_3_template?: string | null
           pushover_user_3_test_phone?: string | null
           pushover_user_3_title?: string | null
@@ -165,6 +174,7 @@ export type Database = {
         Row: {
           advisor_name: string | null
           agent_id: string | null
+          assigned_profile_id: string | null
           created_at: string
           eleven_labs_conversation_id: string | null
           email: string | null
@@ -186,6 +196,7 @@ export type Database = {
         Insert: {
           advisor_name?: string | null
           agent_id?: string | null
+          assigned_profile_id?: string | null
           created_at?: string
           eleven_labs_conversation_id?: string | null
           email?: string | null
@@ -207,6 +218,7 @@ export type Database = {
         Update: {
           advisor_name?: string | null
           agent_id?: string | null
+          assigned_profile_id?: string | null
           created_at?: string
           eleven_labs_conversation_id?: string | null
           email?: string | null
