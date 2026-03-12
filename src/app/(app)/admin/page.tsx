@@ -106,8 +106,10 @@ export default function SuperAdminDashboard() {
                 .filter(t => t.id !== profile?.tenant_id) // Ocultar el tenant del super admin
                 .map((t: any) => {
                     const profiles = Array.isArray(t.profiles) ? t.profiles : [];
-                    // Encontrar el admin principal de esta empresa
-                    const mainAdmin = profiles.find((p: any) => p.role === 'admin') || profiles[0] || {};
+                    // Encontrar el propietario de esta empresa (tenant_owner o legacy admin)
+                    const mainAdmin = profiles.find((p: any) => p.role === 'tenant_owner')
+                        || profiles.find((p: any) => p.role === 'admin')
+                        || profiles[0] || {};
 
                     return {
                         id: mainAdmin.id || t.id, // ID del admin para impersonate
@@ -367,8 +369,8 @@ export default function SuperAdminDashboard() {
             {/* Toast Popup */}
             {toast && (
                 <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border animate-in slide-in-from-bottom-4 duration-300 ${toast.type === 'success'
-                        ? 'bg-green-50 border-green-200 text-green-800'
-                        : 'bg-red-50 border-red-200 text-red-800'
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : 'bg-red-50 border-red-200 text-red-800'
                     }`}>
                     {toast.type === 'success'
                         ? <CheckCircle2 size={18} className="text-green-500 shrink-0" />

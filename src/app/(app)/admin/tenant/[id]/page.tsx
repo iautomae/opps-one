@@ -247,9 +247,10 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
 
     if (!profile || profile.role !== "admin") return null;
 
-    // Separar "Admin General" del resto del equipo
-    const adminGeneral = tenantUsers.find(u => u.role === 'admin');
-    const teamMembers = tenantUsers.filter(u => u.role !== 'admin');
+    // Separar "Propietario" del resto del equipo
+    const adminGeneral = tenantUsers.find(u => u.role === 'tenant_owner')
+        || tenantUsers.find(u => u.role === 'admin' && u.id !== profile?.id);
+    const teamMembers = tenantUsers.filter(u => u !== adminGeneral);
 
     const getAccessIndicator = (user: ClientProfile) => {
         let totalFeatures = AVAILABLE_FEATURES.length;
