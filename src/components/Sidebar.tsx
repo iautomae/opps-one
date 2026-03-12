@@ -79,12 +79,17 @@ export function Sidebar() {
 
   // Super admin → menú de admin (Usuarios, Plataformas)
   // Tenant owner / user → menú filtrado por features habilitadas
+  // Super admin → menú admin; Tenant owner / user → filtrado por features JSONB
+  // La API toggle-access mantiene features.leads y has_leads_access sincronizados,
+  // así que podemos usar features[key] para todo de forma uniforme.
   const visibleMenu = profile?.role === 'admin'
     ? ADMIN_MENU
     : PRIMARY_MENU.filter(item => {
       if (!item.feature) return true;
-      // 'leads' uses the legacy has_leads_access field
-      if (item.feature === 'leads') return profile?.has_leads_access === true;
+      // Checar features JSONB (leads incluido) con fallback a has_leads_access por legacy
+      if (item.feature === 'leads') {
+        return profile?.features?.['leads'] === true || profile?.has_leads_access === true;
+      }
       return profile?.features?.[item.feature] === true;
     });
 

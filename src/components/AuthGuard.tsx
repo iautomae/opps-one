@@ -45,7 +45,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                     }
 
                     // Route protection: prevent access to pages without the matching feature
-                    if (pathname.startsWith('/leads') && !profile.has_leads_access) {
+                    if (pathname.startsWith('/leads') && !profile.has_leads_access && !profile.features?.['leads']) {
                         router.push(getFirstAvailableRoute(profile));
                         return;
                     }
@@ -88,7 +88,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 function getFirstAvailableRoute(profile: NonNullable<UserProfile>): string {
-    if (profile.has_leads_access) return '/leads';
+    if (profile.has_leads_access || profile.features?.['leads']) return '/leads';
     if (profile.features?.['tramites']) return '/tramites';
     if (profile.features?.['dashboard']) return '/dashboard';
     // Fallback: find first enabled feature

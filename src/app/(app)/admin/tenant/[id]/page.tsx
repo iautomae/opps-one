@@ -127,40 +127,33 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
             return;
         }
 
+        const featureKey = isBooleanCol ? 'leads' : featureId;
+        const currentValue = isBooleanCol ? user.has_leads_access : !!user.features?.[featureId];
+        const newValue = !currentValue;
+
         try {
-            if (isBooleanCol) {
-                const newValue = !user.has_leads_access;
-                const { error } = await supabase
-                    .from("profiles")
-                    .update({ has_leads_access: newValue })
-                    .eq("id", userId);
+            const res = await fetch('/api/admin/toggle-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, featureKey, newValue }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
 
-                if (error) throw error;
-
-                setTenantUsers((prev) =>
-                    prev.map((c) =>
-                        c.id === userId ? { ...c, has_leads_access: newValue } : c
-                    )
-                );
-            } else {
-                const newFeatures = { ...user.features };
-                newFeatures[featureId] = !newFeatures[featureId];
-
-                const { error } = await supabase
-                    .from("profiles")
-                    .update({ features: newFeatures })
-                    .eq("id", userId);
-
-                if (error) throw error;
-
-                setTenantUsers((prev) =>
-                    prev.map((c) =>
-                        c.id === userId ? { ...c, features: newFeatures } : c
-                    )
-                );
-            }
+            setTenantUsers((prev) =>
+                prev.map((c) =>
+                    c.id === userId
+                        ? {
+                            ...c,
+                            features: data.features,
+                            has_leads_access: data.has_leads_access
+                        }
+                        : c
+                )
+            );
         } catch (err) {
             console.error("Error updating features:", err);
+            setToast({ message: 'Error al actualizar el acceso.', type: 'error' });
         } finally {
             setIsUpdating(null);
         }
@@ -217,29 +210,24 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
         const featureKey = platformName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
         setIsTogglingPlatform(featureKey);
 
+        const currentValue = !!adminGeneral.features?.[featureKey];
+        const newValue = !currentValue;
+
         try {
-            const newFeatures = { ...adminGeneral.features };
-            newFeatures[featureKey] = !newFeatures[featureKey];
+            const res = await fetch('/api/admin/toggle-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: adminGeneral.id, featureKey, newValue }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
 
-            // Build update payload: always update features JSONB
-            const updatePayload: Record<string, unknown> = { features: newFeatures };
-
-            // 'leads' also uses the legacy has_leads_access boolean column
-            if (featureKey === 'leads') {
-                updatePayload.has_leads_access = newFeatures[featureKey];
-            }
-
-            const { error } = await supabase
-                .from('profiles')
-                .update(updatePayload)
-                .eq('id', adminGeneral.id);
-            if (error) throw error;
             setTenantUsers(prev => prev.map(u =>
                 u.id === adminGeneral.id
                     ? {
                         ...u,
-                        features: newFeatures,
-                        ...(featureKey === 'leads' ? { has_leads_access: newFeatures[featureKey] } : {})
+                        features: data.features,
+                        has_leads_access: data.has_leads_access
                     }
                     : u
             ));
