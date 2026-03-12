@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
         // 4. Crear el usuario en Supabase Auth y generar link de invitación (SIN enviar correo de Supabase)
         // generateLink crea el usuario internamente si no existe y nos devuelve la URL de acción.
-        const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'opps.one';
+        const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'opps.one').trim();
         const tenantBaseUrl = `https://${slug}.${rootDomain}`;
 
         const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.generateLink({
