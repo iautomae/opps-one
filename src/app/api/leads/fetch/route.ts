@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         // Verify the agent exists
         const { data: agent, error: agentError } = await supabaseAdmin
             .from('agentes')
-            .select('id, user_id, pushover_user_1_profile_id, pushover_user_2_profile_id, pushover_user_3_profile_id')
+            .select('id, user_id, pushover_user_1_profile_id, pushover_user_2_profile_id, pushover_user_3_profile_id, pushover_user_1_name, pushover_user_2_name, pushover_user_3_name')
             .eq('id', agentId)
             .single();
 
@@ -58,29 +58,60 @@ export async function GET(request: Request) {
             return NextResponse.json({ leads: leads || [] });
         }
 
-        // Resolve slot numbers to profile_ids
+        // Resolve slot numbers to profile_ids AND advisor names
         const slots = Array.isArray(visibility) ? visibility : [];
         const visibleProfileIds: string[] = [];
+        const visibleAdvisorNames: string[] = [];
         for (const slot of slots) {
-            const profileId = slot === 1 ? agent.pushover_user_1_profile_id
-                : slot === 2 ? agent.pushover_user_2_profile_id
-                : slot === 3 ? agent.pushover_user_3_profile_id
+            const slotNum = typeof slot === 'string' ? parseInt(slot, 10) : slot;
+            const profileId = slotNum === 1 ? agent.pushover_user_1_profile_id
+                : slotNum === 2 ? agent.pushover_user_2_profile_id
+                : slotNum === 3 ? agent.pushover_user_3_profile_id
                 : null;
             if (profileId) visibleProfileIds.push(profileId);
+
+            const advisorName = slotNum === 1 ? agent.pushover_user_1_name
+                : slotNum === 2 ? agent.pushover_user_2_name
+                : slotNum === 3 ? agent.pushover_user_3_name
+                : null;
+            if (advisorName) visibleAdvisorNames.push(advisorName);
         }
 
-        if (visibleProfileIds.length === 0) {
+        if (visibleProfileIds.length === 0 && visibleAdvisorNames.length === 0) {
             return NextResponse.json({ leads: [] });
         }
 
-        const { data: leads, error } = await supabaseAdmin
-            .from('leads')
-            .select('*')
-            .eq('agent_id', agentId)
-            .in('assigned_profile_id', visibleProfileIds)
-            .order('created_at', { ascending: false });
+        // Filter by assigned_profile_id OR advisor_name (fallback when profile_ids aren't linked)
+        let leads;
+        if (visibleProfileIds.length > 0 && visibleAdvisorNames.length > 0) {
+            const { data, error } = await supabaseAdmin
+                .from('leads')
+                .select('*')
+                .eq('agent_id', agentId)
+                .or(`assigned_profile_id.in.(${visibleProfileIds.join(',')}),advisor_name.in.(${visibleAdvisorNames.join(',')})`)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            leads = data;
+        } else if (visibleProfileIds.length > 0) {
+            const { data, error } = await supabaseAdmin
+                .from('leads')
+                .select('*')
+                .eq('agent_id', agentId)
+                .in('assigned_profile_id', visibleProfileIds)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            leads = data;
+        } else {
+            const { data, error } = await supabaseAdmin
+                .from('leads')
+                .select('*')
+                .eq('agent_id', agentId)
+                .in('advisor_name', visibleAdvisorNames)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            leads = data;
+        }
 
-        if (error) throw error;
         return NextResponse.json({ leads: leads || [] });
     } catch (error: unknown) {
         console.error('Error fetching leads:', error);
