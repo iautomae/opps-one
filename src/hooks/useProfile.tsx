@@ -175,10 +175,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const isImpersonating = !!(viewAsUid && realProfile?.role === 'admin' && profile?.id !== realProfile?.id);
 
     const exitImpersonation = () => {
-        // Remove view_as from URL
-        const url = new URL(window.location.href);
-        url.searchParams.delete('view_as');
-        window.location.href = url.toString();
+        // Navigate back to admin panel directly
+        window.location.href = '/admin';
     };
 
     return (
