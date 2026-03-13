@@ -17,6 +17,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useUI } from '@/hooks/useUI';
+import { useProfile } from '@/hooks/useProfile';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -52,6 +53,7 @@ export function SubSidebar() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { activeCategory, isSubSidebarOpen, setSubSidebarOpen } = useUI();
+    const { profile, isImpersonating } = useProfile();
 
     // We are NOT auto-opening anymore as per user request ("solo cuando se clickeado").
     // But we close it if the pathname or search parameters change (user clicked an item)
@@ -63,6 +65,13 @@ export function SubSidebar() {
 
     const config = SUB_MENU_CONFIG[activeCategory as keyof typeof SUB_MENU_CONFIG];
     if (!config) return null;
+
+    // Filter items: "Equipo" only visible to tenant_owner (or admin impersonating one)
+    const isAdminDirect = profile?.role === 'admin' && !isImpersonating;
+    const filteredItems = config.items.filter(item => {
+        if (item.href === '/settings/team' && isAdminDirect) return false;
+        return true;
+    });
 
     return (
         <>
@@ -85,7 +94,7 @@ export function SubSidebar() {
                     </div>
 
                     <nav className="space-y-1">
-                        {config.items.map((item) => {
+                        {filteredItems.map((item) => {
                             const isActive = pathname === item.href;
                             // Preserve ?view_as= during impersonation
                             const viewAs = searchParams.get('view_as');
