@@ -654,6 +654,25 @@ export default function DynamicLeadsDashboard() {
                     console.error('Server side error:', err);
                     throw new Error(err.error || 'Server error');
                 }
+            } else if (profile?.role === 'tenant_owner') {
+                // Tenant owners use server-side API to bypass RLS for shared/global agents
+                const { data: { session } } = await supabase.auth.getSession();
+                const res = await fetch('/api/agents/update-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
+                    body: JSON.stringify({
+                        agentId: configuringAgent.id,
+                        config: updateData
+                    })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    console.error('Server side error:', err);
+                    throw new Error(err.error || 'Server error');
+                }
             } else {
                 console.log('Direct Save Payload:', updateData);
                 const { error } = await supabase
