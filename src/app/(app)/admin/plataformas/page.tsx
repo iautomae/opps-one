@@ -114,13 +114,8 @@ export default function PlataformasPage() {
         reorderPlatforms(reordered);
     };
 
-    const handleNavigate = (platform: { name: string }) => {
-        // Try to find a matching route by normalized original name or common aliases
-        const normalized = normalizeName(platform.name);
-        // Check direct match or known routes
-        const route = PLATFORM_ROUTES[normalized]
-            || Object.entries(PLATFORM_ROUTES).find(([key]) => normalized.includes(key))?.[1];
-
+    const handleNavigate = (platform: { name: string; route_key: string }) => {
+        const route = PLATFORM_ROUTES[platform.route_key];
         if (route) {
             router.push(route);
         } else {
@@ -254,7 +249,10 @@ export default function PlataformasPage() {
                                     })()
                                 ) : (
                                     <>
-                                        <h3 className="text-sm font-bold text-gray-900 mb-1">{platform.name}</h3>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-sm font-bold text-gray-900">{platform.name}</h3>
+                                            <span className="text-[8px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded uppercase tracking-wider">/{platform.route_key}</span>
+                                        </div>
                                         <p className="text-xs text-gray-500 leading-relaxed mb-4">
                                             {platform.description}
                                         </p>

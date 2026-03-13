@@ -4,11 +4,22 @@ import { getSupabaseAdminClient, requireAuth } from '@/lib/server-auth';
 const supabaseAdmin = getSupabaseAdminClient();
 
 const DEFAULT_PLATFORMS = [
-    { name: 'Trámites', description: 'Gestión de licencias, tarjetas de propiedad y trámites documentarios.', icon: 'FileText', color: 'blue', is_active: true },
-    { name: 'Leads', description: 'CRM de captación de clientes, seguimiento de prospectos y conversiones.', icon: 'Users', color: 'emerald', is_active: true },
-    { name: 'Reclutamiento', description: 'Gestión de vacantes, candidatos y procesos de selección de personal.', icon: 'Briefcase', color: 'purple', is_active: true },
-    { name: 'Textil', description: 'Control de operaciones textiles, inventario y producción.', icon: 'Shirt', color: 'amber', is_active: true },
+    { name: 'Trámites', description: 'Gestión de licencias, tarjetas de propiedad y trámites documentarios.', icon: 'FileText', color: 'blue', is_active: true, route_key: 'tramites' },
+    { name: 'Leads', description: 'CRM de captación de clientes, seguimiento de prospectos y conversiones.', icon: 'Users', color: 'emerald', is_active: true, route_key: 'leads' },
+    { name: 'Reclutamiento', description: 'Gestión de vacantes, candidatos y procesos de selección de personal.', icon: 'Briefcase', color: 'purple', is_active: true, route_key: 'reclutamiento' },
+    { name: 'Textil', description: 'Control de operaciones textiles, inventario y producción.', icon: 'Shirt', color: 'amber', is_active: true, route_key: 'textil' },
 ];
+
+// Known route keywords for deriving route_key from custom platform names
+const KNOWN_ROUTE_KEYWORDS = ['leads', 'tramites', 'reclutamiento', 'textil', 'dashboard'];
+
+function deriveRouteKey(name: string): string {
+    const normalized = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    for (const keyword of KNOWN_ROUTE_KEYWORDS) {
+        if (normalized.includes(keyword)) return keyword;
+    }
+    return normalized.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
 
 const COLOR_PALETTE = ['blue', 'emerald', 'purple', 'amber', 'rose', 'cyan', 'indigo', 'orange'];
 const ICON_PALETTE = ['FileText', 'Users', 'Briefcase', 'Shirt', 'Heart', 'Globe', 'Zap', 'Package'];
@@ -87,6 +98,7 @@ export async function POST(req: Request) {
                 icon: ICON_PALETTE[index],
                 color: COLOR_PALETTE[index],
                 is_active: true,
+                route_key: deriveRouteKey(normalizedName),
             })
             .select()
             .single();

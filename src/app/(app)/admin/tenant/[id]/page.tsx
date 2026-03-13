@@ -211,9 +211,9 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
         }
     };
 
-    const togglePlatformAccess = async (platformName: string) => {
+    const togglePlatformAccess = async (routeKey: string) => {
         if (!adminGeneral) return;
-        const featureKey = platformName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+        const featureKey = routeKey; // Use the static route_key directly
         setIsTogglingPlatform(featureKey);
 
         const currentValue = !!adminGeneral.features?.[featureKey];
@@ -357,16 +357,15 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
                                             {idx === 0 && (
                                                 <div className="flex items-center gap-1.5">
                                                     {dbPlatforms.map((platform) => {
-                                                        const featureKey = platform.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
-                                                        const isActive = !!owner.features?.[featureKey];
-                                                        const isToggling = isTogglingPlatform === featureKey;
+                                                        const isActive = !!owner.features?.[platform.route_key];
+                                                        const isToggling = isTogglingPlatform === platform.route_key;
                                                         const IconComp = getIconComponent(platform.icon);
                                                         const colors = getColorClasses(platform.color);
 
                                                         return (
                                                             <button
                                                                 key={platform.id}
-                                                                onClick={() => togglePlatformAccess(platform.name)}
+                                                                onClick={() => togglePlatformAccess(platform.route_key)}
                                                                 disabled={isToggling}
                                                                 className={cn(
                                                                     "w-[30px] h-[30px] rounded-lg flex items-center justify-center border transition-all relative group/tip",
@@ -381,6 +380,7 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
                                                                 }
                                                                 <span className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                                                                     {platform.name}
+                                                                    <span className="block text-[7px] text-gray-400 font-medium">/{platform.route_key}</span>
                                                                 </span>
                                                             </button>
                                                         );

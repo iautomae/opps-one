@@ -15,6 +15,20 @@ export interface Platform {
     color: string;      // color key: "blue", "emerald", etc.
     is_active: boolean;
     created_at: string;
+    route_key: string;  // static key for routing: "leads", "tramites", etc.
+}
+
+// Known route keywords — used to derive route_key from platform name
+const KNOWN_ROUTE_KEYWORDS = ['leads', 'tramites', 'reclutamiento', 'textil', 'dashboard'];
+
+/** Derive a stable route_key from a platform name. e.g. "Escolta Leads" → "leads" */
+export function deriveRouteKey(name: string): string {
+    const normalized = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    for (const keyword of KNOWN_ROUTE_KEYWORDS) {
+        if (normalized.includes(keyword)) return keyword;
+    }
+    // Fallback: full normalized name with underscores
+    return normalized.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
 // Map icon names to actual Lucide components
@@ -56,7 +70,12 @@ export function usePlatforms() {
             const res = await fetch('/api/admin/platforms', { headers });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Error al cargar plataformas');
-            setPlatforms(data.platforms || []);
+            // Enrich each platform with a stable route_key
+            const enriched = (data.platforms || []).map((p: Platform) => ({
+                ...p,
+                route_key: p.route_key || deriveRouteKey(p.name),
+            }));
+            setPlatforms(enriched);
         } catch (err: any) {
             console.error('usePlatforms fetch error:', err);
             setError(err.message);
