@@ -230,7 +230,7 @@ export default function TeamPage() {
             );
             setToast({
                 message: newRole === "tenant_owner"
-                    ? "Miembro promovido a Co-Propietario."
+                    ? "Miembro promovido a Administrador."
                     : "Miembro degradado a Empleado.",
                 type: "success",
             });
@@ -494,7 +494,7 @@ export default function TeamPage() {
                                                 {member.role === "tenant_owner" && (
                                                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border inline-flex items-center gap-1 text-purple-600 bg-purple-50 border-purple-200">
                                                         <Crown size={8} />
-                                                        Co-Propietario
+                                                        Admin
                                                     </span>
                                                 )}
                                             </div>
@@ -510,10 +510,7 @@ export default function TeamPage() {
                                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
                                     {/* User header */}
                                     <div className="p-6 border-b border-gray-100">
-                                        <div className="flex items-center gap-3 mb-1">
-                                            <div className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary font-bold text-lg">
-                                                {selectedMember.email.charAt(0).toUpperCase()}
-                                            </div>
+                                        <div className="flex items-center justify-between">
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <h3 className="text-lg font-bold text-gray-900">
@@ -534,34 +531,26 @@ export default function TeamPage() {
                                                 )}
                                                 <p className="text-xs text-gray-500 mt-0.5">Configura a qué plataformas y secciones tiene acceso.</p>
                                             </div>
-                                        </div>
 
-                                        {/* Role change button */}
-                                        <div className="mt-3 flex items-center gap-2">
+                                            {/* Role change button - top right */}
                                             {selectedMember.role === "tenant_owner" ? (
                                                 <button
                                                     onClick={() => handleChangeRole(selectedMember.id, "client")}
                                                     disabled={changingRole}
-                                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-all disabled:opacity-50"
+                                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-all disabled:opacity-50 shrink-0"
                                                 >
                                                     {changingRole ? <LoaderCircle size={14} className="animate-spin" /> : <UserMinus size={14} />}
-                                                    Degradar a Empleado
+                                                    Quitar Administrador
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={() => handleChangeRole(selectedMember.id, "tenant_owner")}
                                                     disabled={changingRole}
-                                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all disabled:opacity-50"
+                                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all disabled:opacity-50 shrink-0"
                                                 >
                                                     {changingRole ? <LoaderCircle size={14} className="animate-spin" /> : <Crown size={14} />}
-                                                    Promover a Co-Propietario
+                                                    Volver Administrador
                                                 </button>
-                                            )}
-                                            {selectedMember.role === "tenant_owner" && (
-                                                <span className="text-[10px] font-bold text-purple-500 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
-                                                    <Crown size={10} />
-                                                    Co-Propietario
-                                                </span>
                                             )}
                                         </div>
                                     </div>
