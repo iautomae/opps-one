@@ -1278,6 +1278,29 @@ export default function DynamicLeadsDashboard() {
                                         })}
                                     </div>
 
+                                    {/* Calendar Icon with Today Alert */}
+                                    {(() => {
+                                        const today = new Date().toISOString().slice(0, 10);
+                                        const todayCount = realLeads.filter(l => l.fecha_seguimiento && l.fecha_seguimiento.slice(0, 10) === today).length;
+                                        const totalScheduled = realLeads.filter(l => !!l.fecha_seguimiento).length;
+                                        return (
+                                            <button
+                                                onClick={() => setIsCalendarOpen(true)}
+                                                className="relative p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-brand-primary/30 transition-all group"
+                                                title={`Calendario de seguimientos${todayCount > 0 ? ` — ${todayCount} para hoy` : ''}`}
+                                            >
+                                                <Calendar size={16} className="text-gray-500 group-hover:text-brand-primary transition-colors" />
+                                                {todayCount > 0 && (
+                                                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 bg-amber-400 text-white text-[9px] font-black rounded-full shadow-md shadow-amber-400/40 animate-pulse">
+                                                        {todayCount}
+                                                    </span>
+                                                )}
+                                                {todayCount === 0 && totalScheduled > 0 && (
+                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white shadow-sm" />
+                                                )}
+                                            </button>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
@@ -1355,7 +1378,7 @@ export default function DynamicLeadsDashboard() {
                                                         {lead.status === 'POTENCIAL' ? (
                                                             <span className={cn(
                                                                 "px-2 py-1 rounded-lg text-[8px] font-bold uppercase whitespace-nowrap inline-flex justify-center border w-full",
-                                                                lead.estado === 'Sin respuesta' && "bg-gray-100 text-gray-500 border-gray-200",
+                                                                lead.estado === 'Sin respuesta' && "bg-gray-50 text-gray-400 border-gray-200",
                                                                 lead.estado === 'En seguimiento' && "bg-blue-100 text-blue-600 border-blue-200",
                                                                 lead.estado === 'Compromiso de pago' && "bg-amber-100 text-amber-600 border-amber-200",
                                                                 lead.estado === 'Pagado' && "bg-green-100 text-green-600 border-green-200",
@@ -2786,17 +2809,12 @@ export default function DynamicLeadsDashboard() {
                                     {(crmModalLead.estado === 'En seguimiento' || crmModalLead.estado === 'Compromiso de pago') && (
                                         <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Próximo Contacto</label>
-                                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center gap-3">
-                                                <div className="p-2 bg-brand-primary/10 rounded-lg text-brand-primary shrink-0">
-                                                    <Calendar size={16} />
-                                                </div>
-                                                <input
-                                                    type="datetime-local"
-                                                    value={crmModalLead.fecha_seguimiento ? new Date(crmModalLead.fecha_seguimiento).toISOString().slice(0, 16) : ''}
-                                                    onChange={(e) => setCrmModalLead({ ...crmModalLead, fecha_seguimiento: e.target.value ? new Date(e.target.value).toISOString() : '' })}
-                                                    className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all"
-                                                />
-                                            </div>
+                                            <input
+                                                type="datetime-local"
+                                                value={crmModalLead.fecha_seguimiento ? new Date(crmModalLead.fecha_seguimiento).toISOString().slice(0, 16) : ''}
+                                                onChange={(e) => setCrmModalLead({ ...crmModalLead, fecha_seguimiento: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all"
+                                            />
                                         </div>
                                     )}
                                 </div>
