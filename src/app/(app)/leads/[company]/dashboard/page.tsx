@@ -1518,6 +1518,7 @@ export default function DynamicLeadsDashboard() {
                                                     </td>
                                                     <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center">
                                                         <div className="flex items-center justify-center gap-1.5">
+                                                            {(isAdmin || isTenantOwner) && (
                                                             <button
                                                                 onClick={() => { setCrmModalLead(lead); setCrmModalType('INFO'); }}
                                                                 className="p-1.5 bg-emerald-50 text-emerald-500 border border-emerald-200 rounded-lg transition-all hover:scale-110 hover:shadow-md hover:shadow-emerald-100"
@@ -1525,6 +1526,7 @@ export default function DynamicLeadsDashboard() {
                                                             >
                                                                 <UserCog size={13} />
                                                             </button>
+                                                            )}
                                                             {lead.status === 'POTENCIAL' && (
                                                                 <button
                                                                     onClick={() => { setCrmModalLead(lead); setCrmModalType('FOLLOW_UP'); }}
