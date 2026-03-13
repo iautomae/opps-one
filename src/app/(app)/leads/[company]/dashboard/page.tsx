@@ -1283,18 +1283,18 @@ export default function DynamicLeadsDashboard() {
 
                             <div className="flex-1 overflow-auto bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200 shadow-xl relative flex flex-col">
                                 <div className="flex-1 overflow-auto">
-                                    <table className="w-full text-left border-collapse table-fixed">
+                                    <table className="w-full text-left border-collapse">
                                         <thead className="bg-white sticky top-0 z-10 shadow-sm">
                                             <tr>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-900 border-b border-gray-200 uppercase tracking-tight bg-gray-50/50 w-[75px]">Fecha</th>
-                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[50px] text-center">Tokens</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[160px]">Nombre</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[105px]">Teléfono</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50">Resumen</th>
-                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[42px]">Chat</th>
-                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[95px]">Calific.</th>
-                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[100px]">Estado</th>
-                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[80px]">Asesor</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-900 border-b border-gray-200 uppercase tracking-tight bg-gray-50/50 w-[80px]">Fecha</th>
+                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[65px] text-center">Tokens</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[180px]">Nombre</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[115px]">Teléfono</th>
+                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[280px]">Resumen Llamada</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[45px]">Chat</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[105px]">Calificación</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[125px]">Estado Lead</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[90px]">Asesor</th>
                                                 <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[155px]">CRM</th>
                                             </tr >
                                         </thead >
@@ -1304,7 +1304,7 @@ export default function DynamicLeadsDashboard() {
                                                     key={lead.id}
                                                     className="bg-white hover:bg-gray-100 transition-colors group"
                                                 >
-                                                    <td className="px-3 py-1.5 border-b border-gray-100">
+                                                    <td className="px-4 py-1.5 border-b border-gray-100">
                                                         <div className="flex flex-col">
                                                             <span className="text-[10px] font-medium text-gray-700">
                                                                 {lead.date}
@@ -1314,21 +1314,21 @@ export default function DynamicLeadsDashboard() {
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
-                                                        <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full border border-gray-200">
+                                                    <td className="px-3 py-1.5 border-b border-l border-gray-100 text-center">
+                                                        <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
                                                             {lead.tokens_billed?.toLocaleString() || 0}
                                                         </span>
                                                     </td>
-                                                    <td className="px-3 py-1.5 border-b border-l border-gray-100">
+                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100">
                                                         <span className="text-xs font-medium text-gray-700 block truncate" title={lead.name}>
                                                             {lead.name}
                                                         </span>
                                                     </td>
-                                                    <td className="px-3 py-1.5 border-b border-l border-gray-100">
+                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100">
                                                         <span className="text-[10px] text-gray-500 font-medium">{lead.phone}</span>
                                                     </td>
-                                                    <td className="px-3 py-1.5 border-b border-l border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => { setSelectedLead(lead); setPanelTab('SUMMARY'); }}>
-                                                        <p className="text-[10px] text-gray-500 line-clamp-2 leading-tight" title="Ver resumen completo">
+                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => { setSelectedLead(lead); setPanelTab('SUMMARY'); }}>
+                                                        <p className="text-[10px] text-gray-500 line-clamp-2 leading-tight max-w-[250px]" title="Ver resumen completo">
                                                             {lead.summary}
                                                         </p>
                                                     </td>
@@ -1345,7 +1345,7 @@ export default function DynamicLeadsDashboard() {
                                                     </td>
                                                     <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
                                                         <span className={cn(
-                                                            "px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wide inline-flex justify-center border",
+                                                            "px-3 py-1 rounded-lg text-[9px] font-bold uppercase whitespace-nowrap inline-flex justify-center border w-full",
                                                             lead.status === 'POTENCIAL' ? "bg-emerald-100 text-emerald-600 border-emerald-200" : "bg-red-100 text-red-600 border-red-200"
                                                         )}>
                                                             {lead.status === 'POTENCIAL' ? 'Potencial' : 'No Potencial'}
@@ -1354,7 +1354,7 @@ export default function DynamicLeadsDashboard() {
                                                     <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
                                                         {lead.status === 'POTENCIAL' ? (
                                                             <span className={cn(
-                                                                "px-1.5 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wide inline-flex justify-center border whitespace-nowrap",
+                                                                "px-2 py-1 rounded-lg text-[8px] font-bold uppercase whitespace-nowrap inline-flex justify-center border w-full",
                                                                 lead.estado === 'Sin respuesta' && "bg-gray-100 text-gray-500 border-gray-200",
                                                                 lead.estado === 'En seguimiento' && "bg-blue-100 text-blue-600 border-blue-200",
                                                                 lead.estado === 'Compromiso de pago' && "bg-amber-100 text-amber-600 border-amber-200",
@@ -1369,7 +1369,7 @@ export default function DynamicLeadsDashboard() {
                                                         )}
                                                     </td>
                                                     <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
-                                                        <span className="text-[9px] font-bold text-gray-700 truncate block">
+                                                        <span className="text-[10px] font-bold text-gray-700 truncate block">
                                                             {lead.status === 'POTENCIAL' ? (lead.advisor_name || '—') : '—'}
                                                         </span>
                                                     </td>
