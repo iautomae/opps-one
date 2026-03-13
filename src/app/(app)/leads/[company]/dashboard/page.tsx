@@ -1376,7 +1376,7 @@ export default function DynamicLeadsDashboard() {
                                 {/* Filter Tabs with Counts - Defined Container */}
                                 <div className="flex bg-gray-300/60 p-1 rounded-xl shadow-sm border border-gray-100/30">
                                     <button
-                                        onClick={() => { setFilterStatus('ALL'); setCurrentPage(1); }}
+                                        onClick={() => { setFilterStatus('ALL'); setFilterEstado(null); setCurrentPage(1); }}
                                         className={cn(
                                             "px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
                                             filterStatus === 'ALL' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"
@@ -1385,7 +1385,7 @@ export default function DynamicLeadsDashboard() {
                                         Todos ({realLeads.length})
                                     </button>
                                     <button
-                                        onClick={() => { setFilterStatus('NO_POTENCIAL'); setCurrentPage(1); }}
+                                        onClick={() => { setFilterStatus('NO_POTENCIAL'); setFilterEstado(null); setCurrentPage(1); }}
                                         className={cn(
                                             "px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
                                             filterStatus === 'NO_POTENCIAL' ? "bg-white text-red-600 shadow-sm" : "text-gray-500 hover:text-red-500"
@@ -1394,7 +1394,7 @@ export default function DynamicLeadsDashboard() {
                                         No Aptos ({realLeads.filter(l => l.status === 'NO_POTENCIAL').length})
                                     </button>
                                     <button
-                                        onClick={() => { setFilterStatus('POTENCIAL'); setCurrentPage(1); }}
+                                        onClick={() => { setFilterStatus('POTENCIAL'); setFilterEstado(null); setCurrentPage(1); }}
                                         className={cn(
                                             "px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
                                             filterStatus === 'POTENCIAL' ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-emerald-600"
@@ -1412,7 +1412,7 @@ export default function DynamicLeadsDashboard() {
                                         return (
                                             <button
                                                 key={btn.value}
-                                                onClick={() => { setFilterEstado(isActive ? null : btn.value); setCurrentPage(1); }}
+                                                onClick={() => { setFilterEstado(isActive ? null : btn.value); if (!isActive) setFilterStatus('POTENCIAL'); setCurrentPage(1); }}
                                                 className={cn(
                                                     "px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
                                                     isActive ? btn.activeClass : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
