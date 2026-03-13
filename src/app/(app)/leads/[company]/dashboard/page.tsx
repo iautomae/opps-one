@@ -1286,16 +1286,16 @@ export default function DynamicLeadsDashboard() {
                                     <table className="w-full text-left border-collapse table-fixed">
                                         <thead className="bg-white sticky top-0 z-10 shadow-sm">
                                             <tr>
-                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-900 border-b border-gray-200 uppercase tracking-tight bg-gray-50/50 w-[90px]">Fecha</th>
-                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[100px] text-center">Tokens</th>
-                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[200px]">Nombre</th>
-                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[130px]">Teléfono</th>
-                                                <th className="px-4 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50">Resumen Llamada</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[55px]">Chat</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[110px]">Calificación</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[110px]">Estado</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[90px]">Asesor</th>
-                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[130px]">CRM</th>
+                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-900 border-b border-gray-200 uppercase tracking-tight bg-gray-50/50 w-[75px]">Fecha</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[50px] text-center">Tokens</th>
+                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[160px]">Nombre</th>
+                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50 w-[105px]">Teléfono</th>
+                                                <th className="px-3 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 uppercase tracking-tight bg-gray-50/50">Resumen</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[42px]">Chat</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[95px]">Calific.</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[100px]">Estado</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[80px]">Asesor</th>
+                                                <th className="px-2 py-3 text-[10px] font-bold text-gray-500 border-b border-l border-gray-100 text-center uppercase tracking-tight bg-gray-50/50 w-[155px]">CRM</th>
                                             </tr >
                                         </thead >
                                         <tbody className="divide-y divide-gray-100">
@@ -1304,7 +1304,7 @@ export default function DynamicLeadsDashboard() {
                                                     key={lead.id}
                                                     className="bg-white hover:bg-gray-100 transition-colors group"
                                                 >
-                                                    <td className="px-4 py-1.5 border-b border-gray-100">
+                                                    <td className="px-3 py-1.5 border-b border-gray-100">
                                                         <div className="flex flex-col">
                                                             <span className="text-[10px] font-medium text-gray-700">
                                                                 {lead.date}
@@ -1314,25 +1314,25 @@ export default function DynamicLeadsDashboard() {
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center">
-                                                        <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
+                                                    <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
+                                                        <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full border border-gray-200">
                                                             {lead.tokens_billed?.toLocaleString() || 0}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100">
-                                                        <span className="text-xs font-medium text-gray-700 block truncate max-w-[200px]" title={lead.name}>
+                                                    <td className="px-3 py-1.5 border-b border-l border-gray-100">
+                                                        <span className="text-xs font-medium text-gray-700 block truncate" title={lead.name}>
                                                             {lead.name}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100">
+                                                    <td className="px-3 py-1.5 border-b border-l border-gray-100">
                                                         <span className="text-[10px] text-gray-500 font-medium">{lead.phone}</span>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => { setSelectedLead(lead); setPanelTab('SUMMARY'); }}>
-                                                        <p className="text-[10px] text-gray-500 line-clamp-2 leading-tight max-w-[250px]" title="Ver resumen completo">
+                                                    <td className="px-3 py-1.5 border-b border-l border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => { setSelectedLead(lead); setPanelTab('SUMMARY'); }}>
+                                                        <p className="text-[10px] text-gray-500 line-clamp-2 leading-tight" title="Ver resumen completo">
                                                             {lead.summary}
                                                         </p>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center">
+                                                    <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
                                                         <button
                                                             onClick={() => { setSelectedLead(lead); setPanelTab('CHAT'); }}
                                                             className="p-1 hover:bg-green-50 text-gray-400 hover:text-green-600 rounded-md transition-colors group/chat"
@@ -1343,21 +1343,22 @@ export default function DynamicLeadsDashboard() {
                                                             </svg>
                                                         </button>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center">
+                                                    <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
                                                         <span className={cn(
-                                                            "px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide inline-flex justify-center border w-[110px]",
+                                                            "px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wide inline-flex justify-center border",
                                                             lead.status === 'POTENCIAL' ? "bg-emerald-100 text-emerald-600 border-emerald-200" : "bg-red-100 text-red-600 border-red-200"
                                                         )}>
                                                             {lead.status === 'POTENCIAL' ? 'Potencial' : 'No Potencial'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center text-nowrap">
+                                                    <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
                                                         {lead.status === 'POTENCIAL' ? (
                                                             <span className={cn(
-                                                                "px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wide inline-flex justify-center border min-w-[120px]",
+                                                                "px-1.5 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wide inline-flex justify-center border whitespace-nowrap",
                                                                 lead.estado === 'Sin respuesta' && "bg-gray-100 text-gray-500 border-gray-200",
                                                                 lead.estado === 'En seguimiento' && "bg-blue-100 text-blue-600 border-blue-200",
                                                                 lead.estado === 'Compromiso de pago' && "bg-amber-100 text-amber-600 border-amber-200",
+                                                                lead.estado === 'Pagado' && "bg-green-100 text-green-600 border-green-200",
                                                                 lead.estado === 'Descartado' && "bg-red-100 text-red-600 border-red-200",
                                                                 !lead.estado && "bg-gray-50 text-gray-400 border-gray-200"
                                                             )}>
@@ -1367,13 +1368,13 @@ export default function DynamicLeadsDashboard() {
                                                             <span className="text-gray-300">—</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center">
-                                                        <span className="text-[10px] font-bold text-gray-700">
+                                                    <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
+                                                        <span className="text-[9px] font-bold text-gray-700 truncate block">
                                                             {lead.status === 'POTENCIAL' ? (lead.advisor_name || '—') : '—'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center">
-                                                        <div className="flex items-center justify-center gap-1.5">
+                                                    <td className="px-2 py-1.5 border-b border-l border-gray-100 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
                                                             {(isAdmin || isTenantOwner) && (
                                                             <button
                                                                 onClick={() => { setCrmModalLead(lead); setCrmModalType('INFO'); }}
