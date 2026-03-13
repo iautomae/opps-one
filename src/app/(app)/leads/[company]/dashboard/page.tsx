@@ -28,10 +28,38 @@ interface Lead {
     created_at: string;
     tokens_billed?: number;
     advisor_name?: string;
-    estado?: 'X Contactar' | 'A futuro' | 'Agendar' | 'Venta Cerrada' | 'Descartado';
+    estado?: 'X Contactar' | 'En seguimiento' | 'Compromiso de pago' | 'Descartado';
     notas_seguimiento?: string;
     fecha_seguimiento?: string;
+    tipo_tramite?: string;
+    motivo_descarte?: string;
 }
+
+// --- CRM Constants ---
+const CRM_ESTADOS = [
+    { value: 'X Contactar', label: 'Sin respuesta / Llamar luego', color: 'bg-gray-100 text-gray-600 border-gray-200', activeColor: 'bg-gray-700 text-white border-gray-700' },
+    { value: 'En seguimiento', label: 'En seguimiento', color: 'bg-blue-50 text-blue-600 border-blue-200', activeColor: 'bg-blue-600 text-white border-blue-600' },
+    { value: 'Compromiso de pago', label: 'Compromiso de pago', color: 'bg-emerald-50 text-emerald-600 border-emerald-200', activeColor: 'bg-emerald-600 text-white border-emerald-600' },
+    { value: 'Descartado', label: 'Descartado / Sin interés', color: 'bg-red-50 text-red-600 border-red-200', activeColor: 'bg-red-600 text-white border-red-600' },
+];
+
+const TIPOS_TRAMITE = [
+    'Licencia L1',
+    'Licencia L4',
+    'Renovación',
+    'Cursos Sucamec',
+    'Asesoría Legal',
+    'Otro',
+];
+
+const MOTIVOS_DESCARTE = [
+    'No contesta',
+    'Número equivocado',
+    'No interesado',
+    'Ya tiene proveedor',
+    'Precio fuera de presupuesto',
+    'Otro',
+];
 
 // Placeholder agent type for better type safety
 interface Agent {
@@ -154,6 +182,8 @@ export default function DynamicLeadsDashboard() {
                 estado?: string;
                 notas_seguimiento?: string;
                 fecha_seguimiento?: string;
+                tipo_tramite?: string;
+                motivo_descarte?: string;
             }) => {
                 const dateObj = new Date(l.created_at);
                 return {
@@ -171,7 +201,9 @@ export default function DynamicLeadsDashboard() {
                     advisor_name: l.advisor_name || '',
                     estado: (l.estado as any) || 'X Contactar',
                     notas_seguimiento: l.notas_seguimiento || '',
-                    fecha_seguimiento: l.fecha_seguimiento || ''
+                    fecha_seguimiento: l.fecha_seguimiento || '',
+                    tipo_tramite: l.tipo_tramite || '',
+                    motivo_descarte: l.motivo_descarte || ''
                 };
             });
             setRealLeads(formattedLeads);
@@ -1441,9 +1473,8 @@ export default function DynamicLeadsDashboard() {
                                                             <span className={cn(
                                                                 "px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide inline-flex justify-center border w-[110px]",
                                                                 lead.estado === 'X Contactar' && "bg-gray-100 text-gray-500 border-gray-200",
-                                                                lead.estado === 'A futuro' && "bg-blue-100 text-blue-600 border-blue-200",
-                                                                lead.estado === 'Agendar' && "bg-purple-100 text-purple-600 border-purple-200",
-                                                                lead.estado === 'Venta Cerrada' && "bg-emerald-100 text-emerald-600 border-emerald-200",
+                                                                lead.estado === 'En seguimiento' && "bg-blue-100 text-blue-600 border-blue-200",
+                                                                lead.estado === 'Compromiso de pago' && "bg-emerald-100 text-emerald-600 border-emerald-200",
                                                                 lead.estado === 'Descartado' && "bg-red-100 text-red-600 border-red-200"
                                                             )}>
                                                                 {lead.estado || 'X Contactar'}
@@ -2661,109 +2692,176 @@ export default function DynamicLeadsDashboard() {
                     </div>
                 )}
 
-                {/* Gestión de Seguimiento Modal */}
+                {/* Gestionar Lead — Offcanvas Panel */}
                 {crmModalType === 'FOLLOW_UP' && crmModalLead && (
-                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-                        <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-300">
-                            <div className="bg-brand-dark p-6 text-white flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-brand-primary/20 rounded-xl text-brand-primary">
-                                        <Calendar size={20} />
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] animate-in fade-in duration-300"
+                            onClick={() => setCrmModalType(null)}
+                        />
+                        {/* Slide Panel */}
+                        <div className="fixed inset-y-0 right-0 w-full max-w-md z-[101] animate-in slide-in-from-right duration-300">
+                            <div className="h-full bg-white shadow-2xl flex flex-col border-l border-gray-200">
+                                {/* Header */}
+                                <div className="bg-brand-dark p-6 text-white shrink-0">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-brand-primary/20 rounded-xl text-brand-primary">
+                                                <Calendar size={20} />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-lg leading-tight uppercase tracking-tight">Gestionar Lead</h3>
+                                                <p className="text-[10px] text-brand-primary font-bold opacity-80 uppercase tracking-widest">Panel de Seguimiento CRM</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setCrmModalType(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white">
+                                            <X size={20} />
+                                        </button>
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold text-lg leading-tight uppercase tracking-tight">Gestión de Seguimiento</h3>
-                                        <p className="text-[10px] text-brand-primary font-bold opacity-80 uppercase tracking-widest">{crmModalLead.name}</p>
+                                    {/* Lead info bar */}
+                                    <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+                                        <div className="w-8 h-8 bg-brand-primary/20 rounded-lg flex items-center justify-center text-brand-primary font-bold text-sm">
+                                            {crmModalLead.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-bold truncate">{crmModalLead.name}</p>
+                                            <p className="text-[10px] text-white/60 font-medium">{crmModalLead.phone} · {crmModalLead.date}</p>
+                                        </div>
+                                        <span className={cn(
+                                            "px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase border shrink-0",
+                                            crmModalLead.status === 'POTENCIAL' ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" : "bg-red-500/20 text-red-300 border-red-400/30"
+                                        )}>
+                                            {crmModalLead.status === 'POTENCIAL' ? 'Potencial' : 'No Potencial'}
+                                        </span>
                                     </div>
                                 </div>
-                                <button onClick={() => setCrmModalType(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white">
-                                    <X size={20} />
-                                </button>
-                            </div>
 
-                            <div className="p-8 space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
+                                {/* Scrollable Content */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                    {/* Section 1: Estado */}
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Estado del Lead</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {CRM_ESTADOS.map((est) => {
+                                                const isActive = (crmModalLead.estado || 'X Contactar') === est.value;
+                                                return (
+                                                    <button
+                                                        key={est.value}
+                                                        onClick={() => setCrmModalLead({ ...crmModalLead, estado: est.value as any })}
+                                                        className={cn(
+                                                            "px-3 py-2.5 rounded-xl text-[11px] font-bold border transition-all duration-200 text-left",
+                                                            isActive ? est.activeColor : est.color,
+                                                            !isActive && "hover:shadow-sm hover:-translate-y-0.5"
+                                                        )}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            {isActive && <Check size={12} className="shrink-0" />}
+                                                            <span>{est.label}</span>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Section 2: Tipo de Trámite */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Estado de Seguimiento</label>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de Trámite</label>
                                         <select
-                                            value={crmModalLead.estado || 'X Contactar'}
-                                            onChange={(e) => setCrmModalLead({ ...crmModalLead, estado: e.target.value as any })}
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all appearance-none cursor-pointer"
+                                            value={crmModalLead.tipo_tramite || ''}
+                                            onChange={(e) => setCrmModalLead({ ...crmModalLead, tipo_tramite: e.target.value })}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/30 transition-all appearance-none cursor-pointer"
                                         >
-                                            <option value="X Contactar">X CONTACTAR</option>
-                                            <option value="A futuro">A FUTURO</option>
-                                            <option value="Agendar">AGENDAR</option>
-                                            <option value="Venta Cerrada">VENTA CERRADA</option>
-                                            <option value="Descartado">DESCARTADO</option>
+                                            <option value="">Seleccionar trámite...</option>
+                                            {TIPOS_TRAMITE.map((t) => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
                                         </select>
                                     </div>
 
+                                    {/* Section 3: Detalles de la llamada */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha Seguimiento</label>
-                                        <input
-                                            type="datetime-local"
-                                            defaultValue={crmModalLead.fecha_seguimiento ? new Date(crmModalLead.fecha_seguimiento).toISOString().slice(0, 16) : ''}
-                                            id="edit-lead-date"
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all"
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Detalles de la Llamada</label>
+                                        <textarea
+                                            value={crmModalLead.notas_seguimiento || ''}
+                                            onChange={(e) => setCrmModalLead({ ...crmModalLead, notas_seguimiento: e.target.value })}
+                                            rows={4}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/30 transition-all resize-none"
+                                            placeholder="Resumen de la conversación, interés del cliente, próximos pasos..."
                                         />
                                     </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Detalle del Interés / Notas</label>
-                                    <textarea
-                                        defaultValue={crmModalLead.notas_seguimiento || ''}
-                                        id="edit-lead-notes"
-                                        rows={4}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all resize-none"
-                                        placeholder="Escribe notas relevantes para el seguimiento..."
-                                    />
-                                </div>
-
-                                {crmModalLead.estado === 'Agendar' && (
-                                    <div className="p-5 bg-purple-50 rounded-2xl border border-purple-100 flex items-center justify-between group animate-in slide-in-from-top-2 duration-300">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-purple-100 text-purple-600 rounded-xl">
-                                                <ExternalLink size={18} />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-purple-900 uppercase tracking-tight">Logística Agendamiento</p>
-                                                <p className="text-[10px] font-medium text-purple-600/80">Sincroniza con tu calendario de Google</p>
-                                            </div>
+                                    {/* Section 4: Conditional — Date OR Motivo */}
+                                    {crmModalLead.estado === 'Descartado' ? (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <label className="text-[10px] font-bold text-red-400 uppercase tracking-widest ml-1">Motivo del Descarte</label>
+                                            <select
+                                                value={crmModalLead.motivo_descarte || ''}
+                                                onChange={(e) => setCrmModalLead({ ...crmModalLead, motivo_descarte: e.target.value })}
+                                                className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-200 transition-all appearance-none cursor-pointer"
+                                            >
+                                                <option value="">Seleccionar motivo...</option>
+                                                {MOTIVOS_DESCARTE.map((m) => (
+                                                    <option key={m} value={m}>{m}</option>
+                                                ))}
+                                            </select>
                                         </div>
-                                        <a
-                                            href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Llamada seguimiento: ${crmModalLead.name}`)}&details=${encodeURIComponent(`Lead: ${crmModalLead.name}\nTeléfono: ${crmModalLead.phone}\nResumen previo: ${crmModalLead.summary || 'Sin resumen'}\nNotas: ${crmModalLead.notas_seguimiento || 'Sin notas'}`)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-4 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-purple-700 transition-colors shadow-sm"
-                                        >
-                                            Google Calendar
-                                        </a>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                                                Fecha / Hora Próximo Contacto <span className="text-red-400">*</span>
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={crmModalLead.fecha_seguimiento ? new Date(crmModalLead.fecha_seguimiento).toISOString().slice(0, 16) : ''}
+                                                onChange={(e) => setCrmModalLead({ ...crmModalLead, fecha_seguimiento: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/30 transition-all"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
 
-                                <div className="pt-2">
+                                {/* Fixed Footer */}
+                                <div className="shrink-0 p-6 border-t border-gray-100 bg-gray-50/80">
                                     <button
                                         onClick={async () => {
-                                            const notas = (document.getElementById('edit-lead-notes') as HTMLTextAreaElement).value;
-                                            const fecha = (document.getElementById('edit-lead-date') as HTMLInputElement).value;
+                                            // Validate: non-descartado needs fecha
+                                            if (crmModalLead.estado !== 'Descartado' && !crmModalLead.fecha_seguimiento) {
+                                                setInfoModal({ isOpen: true, type: 'error', message: 'Debes seleccionar una fecha de próximo contacto.' });
+                                                return;
+                                            }
+                                            if (crmModalLead.estado === 'Descartado' && !crmModalLead.motivo_descarte) {
+                                                setInfoModal({ isOpen: true, type: 'error', message: 'Debes seleccionar un motivo de descarte.' });
+                                                return;
+                                            }
                                             setIsSavingLead(true);
                                             await handleUpdateLead(crmModalLead.id, {
                                                 estado: crmModalLead.estado,
-                                                notas_seguimiento: notas,
-                                                fecha_seguimiento: fecha ? new Date(fecha).toISOString() : undefined
+                                                notas_seguimiento: crmModalLead.notas_seguimiento,
+                                                fecha_seguimiento: crmModalLead.estado === 'Descartado' ? undefined : crmModalLead.fecha_seguimiento,
+                                                tipo_tramite: crmModalLead.tipo_tramite,
+                                                motivo_descarte: crmModalLead.estado === 'Descartado' ? crmModalLead.motivo_descarte : undefined,
                                             });
                                             setIsSavingLead(false);
                                             setCrmModalType(null);
                                         }}
                                         disabled={isSavingLead}
-                                        className="w-full bg-brand-dark text-white py-4 rounded-2xl font-bold text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className="w-full bg-brand-dark text-white py-4 rounded-2xl font-bold text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
                                     >
-                                        {isSavingLead ? <LoaderCircle size={16} className="animate-spin" /> : 'Actualizar Seguimiento'}
+                                        {isSavingLead ? (
+                                            <LoaderCircle size={16} className="animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Bell size={14} />
+                                                Guardar y Agendar Alerta
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div >
         </div >
