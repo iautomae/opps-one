@@ -87,10 +87,15 @@ export function SubSidebar() {
                     <nav className="space-y-1">
                         {config.items.map((item) => {
                             const isActive = pathname === item.href;
+                            // Preserve ?view_as= during impersonation
+                            const viewAs = searchParams.get('view_as');
+                            const hrefWithParams = viewAs
+                                ? `${item.href}${item.href.includes('?') ? '&' : '?'}view_as=${viewAs}`
+                                : item.href;
                             return (
                                 <Link
                                     key={item.href}
-                                    href={item.href}
+                                    href={hrefWithParams}
                                     className={cn(
                                         "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
                                         isActive || (pathname === '/tramites' && item.href.includes('?categoria=') && typeof window !== 'undefined' && window.location.search === item.href.split('?')[1] ? "??" + window.location.search : "")

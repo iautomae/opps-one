@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Users,
   Settings,
@@ -59,6 +59,7 @@ const ADMIN_MENU: MenuItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { activeCategory, setActiveCategory, isSubSidebarOpen, setSubSidebarOpen } = useUI();
@@ -147,7 +148,9 @@ export function Sidebar() {
                 setActiveCategory(item.id);
                 if (item.href) {
                   setSubSidebarOpen(false);
-                  router.push(item.href);
+                  const viewAs = searchParams.get('view_as');
+                  const target = viewAs ? `${item.href}${item.href.includes('?') ? '&' : '?'}view_as=${viewAs}` : item.href;
+                  router.push(target);
                 } else {
                   // Toggle subsidebar if clicking the same active category, else just open it
                   setSubSidebarOpen(isActive ? !isSubSidebarOpen : true);
