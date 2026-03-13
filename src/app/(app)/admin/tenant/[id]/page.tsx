@@ -403,138 +403,76 @@ export default function TenantDetailsPage({ params }: { params: Promise<{ id: st
                         </div>
                     )}
 
-                    {/* Lista de USUARIOS INVITADOS */}
-                    <div className="mt-8">
-                        <div className="flex items-center justify-between mb-4 ml-1">
-                            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Usuarios del Equipo ({teamMembers.length})</h2>
-                        </div>
-                        {teamMembers.length === 0 ? (
-                            <div className="bg-white/50 border border-gray-dashed rounded-3xl p-10 text-center flex flex-col items-center">
-                                <Users size={40} className="text-gray-300 mb-3" />
-                                <p className="text-gray-500 font-medium">El administrador general aún no ha invitado a ningún usuario a su equipo.</p>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col lg:flex-row gap-6 items-start">
-                                {/* PANEL IZQUIERDO: Lista de Usuarios */}
-                                <div className="w-full lg:w-1/3 flex flex-col gap-3">
-                                    {teamMembers.map((user) => {
-                                        const indicator = getAccessIndicator(user);
-                                        const isSelected = selectedUserId === user.id;
-                                        return (
-                                            <button
-                                                key={user.id}
-                                                onClick={() => setSelectedUserId(user.id)}
-                                                className={cn(
-                                                    "p-4 rounded-2xl border text-left transition-all flex gap-3 items-center group relative cursor-pointer",
-                                                    isSelected
-                                                        ? "bg-white border-brand-primary shadow-md ring-1 ring-brand-primary/20"
-                                                        : "bg-white border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md"
-                                                )}
-                                            >
-                                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 shadow-inner transition-colors", isSelected ? "bg-brand-primary/10 text-brand-primary border border-brand-primary/20" : "bg-gray-50 text-gray-500 border border-gray-200")}>
-                                                    {(user.email || '?').charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="overflow-hidden">
-                                                    <p className="text-sm font-bold text-gray-900 truncate">{user.email}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full uppercase whitespace-nowrap flex items-center gap-1 border", indicator.colorClass)}>
-                                                            <CheckCircle2 size={10} />
-                                                            {indicator.label}
-                                                        </span>
+                    {/* Miembros del equipo — mismo contenedor, estilo inline como el admin */}
+                    {teamMembers.length > 0 && (
+                        <div className="mt-1">
+                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                                Equipo ({teamMembers.length})
+                            </h2>
+                            <div className="space-y-2">
+                                {teamMembers.map((member) => {
+                                    return (
+                                        <div key={member.id} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm relative group">
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-400 rounded-l-2xl"></div>
+
+                                            <div className="flex items-center justify-between pl-2">
+                                                {/* Left: Member Info */}
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl border bg-blue-50 border-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0 text-lg">
+                                                        {(member.email || '?').charAt(0).toUpperCase()}
                                                     </div>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* PANEL DERECHO: Detalles y Permisos */}
-                                <div className="w-full lg:w-2/3 sticky top-6">
-                                    {selectedUserId ? (() => {
-                                        const selectedUser = teamMembers.find(u => u.id === selectedUserId);
-                                        if (!selectedUser) return null;
-
-                                        return (
-                                            <div className="bg-white p-5 md:p-6 rounded-2xl border border-gray-200 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
-                                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
                                                     <div>
-                                                        <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                                                            {selectedUser.email}
-                                                        </h3>
-                                                        <p className="text-xs text-gray-500">Configura módulos y permisos de acceso para este usuario.</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0 pt-1">
-                                                        <span className="text-[9px] font-bold px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 uppercase">
-                                                            Empleado
-                                                        </span>
-                                                        <Link
-                                                            href={`/leads/app/dashboard?view_as=${selectedUser.id}`}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white text-[10px] font-bold rounded-lg transition-all border border-brand-primary/20"
-                                                        >
-                                                            <ExternalLink size={12} />
-                                                            Ver Interfaz
-                                                        </Link>
+                                                        <p className="text-sm font-bold text-gray-900 truncate max-w-[250px]">{member.email}</p>
+                                                        <span className="text-[10px] font-bold text-gray-500 uppercase">Empleado</span>
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Permisos de Módulos</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {AVAILABLE_FEATURES.map((feature) => {
-                                                                const isActive = feature.isBooleanCol ? selectedUser.has_leads_access : selectedUser.features?.[feature.id];
-                                                                const key = `${selectedUser.id}-${feature.id}`;
-                                                                return (
-                                                                    <button
-                                                                        key={feature.id}
-                                                                        onClick={() => toggleFeature(selectedUser.id, feature.id, !!feature.isBooleanCol)}
-                                                                        disabled={isUpdating === key}
-                                                                        className={cn(
-                                                                            "px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all",
-                                                                            isActive
-                                                                                ? "bg-brand-primary/10 border-brand-primary/30 text-brand-primary shadow-sm hover:bg-brand-primary/20"
-                                                                                : "bg-white border-gray-200 text-gray-400 hover:text-gray-500 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-100 hover:bg-gray-50 cursor-pointer"
-                                                                        )}
-                                                                    >
-                                                                        <span className="text-sm">{feature.icon}</span>
-                                                                        {feature.label}
-                                                                        {isActive && <CheckCircle2 size={12} className="ml-0.5 opacity-70" />}
-                                                                        {isUpdating === key && <LoaderCircle className="w-3 h-3 animate-spin ml-1" />}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                {/* Right: Platform Icons (read-only) + Ver Interfaz */}
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {dbPlatforms.map((platform) => {
+                                                            const ownerHasAccess = adminGeneral && !!adminGeneral.features?.[platform.route_key];
+                                                            if (!ownerHasAccess) return null;
 
-                                                <div className="mt-8 pt-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50 -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-5 md:px-6 py-4 rounded-b-2xl">
-                                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Opciones Avanzadas</p>
-                                                    <button
-                                                        onClick={() => {
-                                                            setRole(selectedUser.id, 'admin');
-                                                            setSelectedUserId(null);
-                                                        }}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-white hover:bg-red-50 hover:text-red-700 rounded-lg transition-all border border-red-200 shadow-sm"
+                                                            const memberHasAccess = platform.route_key === 'leads'
+                                                                ? member.has_leads_access || !!member.features?.leads
+                                                                : !!member.features?.[platform.route_key];
+                                                            const IconComp = getIconComponent(platform.icon);
+                                                            const colors = getColorClasses(platform.color);
+
+                                                            return (
+                                                                <div
+                                                                    key={platform.id}
+                                                                    className={cn(
+                                                                        "w-[30px] h-[30px] rounded-lg flex items-center justify-center border relative group/tip",
+                                                                        memberHasAccess
+                                                                            ? `${colors.bg} ${colors.border} ${colors.text}`
+                                                                            : "bg-gray-50 border-gray-200 text-gray-300"
+                                                                    )}
+                                                                >
+                                                                    <IconComp size={14} />
+                                                                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-gray-900 text-white text-[9px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                                                                        {platform.name}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <Link
+                                                        href={`/leads/app/dashboard?view_as=${member.id}`}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-bold rounded-lg transition-all border border-blue-200 shrink-0"
                                                     >
-                                                        <ShieldAlert size={12} />
-                                                        Transferir Admin
-                                                    </button>
+                                                        <ExternalLink size={12} />
+                                                        Ver Interfaz
+                                                    </Link>
                                                 </div>
                                             </div>
-                                        );
-                                    })() : (
-                                        <div className="bg-gray-50/50 border-gray-300 border-dashed rounded-2xl p-8 text-center flex flex-col items-center justify-center min-h-[250px] border-2">
-                                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm mb-3 border border-gray-100">
-                                                <Users size={20} className="text-gray-300" />
-                                            </div>
-                                            <h3 className="text-sm font-bold text-gray-700 mb-1">Selecciona un Usuario</h3>
-                                            <p className="text-xs text-gray-500 max-w-[250px]">Haz clic en la lista para ver o modificar los accesos específicos del usuario.</p>
                                         </div>
-                                    )}
-                                </div>
+                                    );
+                                })}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
