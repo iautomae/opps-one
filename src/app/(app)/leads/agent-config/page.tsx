@@ -82,6 +82,7 @@ export default function AgentConfigPage() {
     const [files, setFiles] = useState<{ name: string, size: string }[]>([]);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isAgentLoading, setIsAgentLoading] = useState(true);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // Form States
@@ -153,7 +154,11 @@ export default function AgentConfigPage() {
         if (!user || !targetUid) return;
 
         async function loadAgent() {
-            if (!agentId) return;
+            if (!agentId) {
+                setIsAgentLoading(false);
+                return;
+            }
+            setIsAgentLoading(true);
 
             let data, error;
             const isImpersonating = isAdmin && viewAsUid;
@@ -219,6 +224,7 @@ export default function AgentConfigPage() {
             } else if (error) {
                 console.error('Error loading agent:', error);
             }
+            setIsAgentLoading(false);
         }
 
         loadAgent();
@@ -668,8 +674,25 @@ export default function AgentConfigPage() {
                 </button>
             </div>
 
+            {/* Loading State */}
+            {isAgentLoading && (
+                <div className="flex flex-col items-center justify-center py-24 gap-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse">Cargando configuración...</p>
+                    <div className="w-64 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-brand-turquoise rounded-full animate-[loading-bar_1.5s_ease-in-out_infinite]" />
+                    </div>
+                    <style jsx>{`
+                        @keyframes loading-bar {
+                            0% { width: 0%; margin-left: 0%; }
+                            50% { width: 60%; margin-left: 20%; }
+                            100% { width: 0%; margin-left: 100%; }
+                        }
+                    `}</style>
+                </div>
+            )}
+
             {/* Tab Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+            {!isAgentLoading && <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 flex flex-col">
                     {activeTab === 'behavior' && (
@@ -1059,7 +1082,7 @@ export default function AgentConfigPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div>}
             {/* Test Chat Modal */}
             {showTestChat && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
