@@ -17,7 +17,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { leadId, advisorName, name, status, estado, notas_seguimiento, fecha_seguimiento, tipo_tramite, motivo_descarte } = body;
+        const { leadId, advisorName, name, status, estado, notas_seguimiento, fecha_seguimiento, tipo_tramite, motivo_descarte, primer_pago, segundo_pago } = body;
 
         if (!leadId) {
             return NextResponse.json({ error: 'Falta el leadId.' }, { status: 400 });
@@ -61,6 +61,8 @@ export async function POST(request: Request) {
         if (fecha_seguimiento !== undefined) updateData.fecha_seguimiento = fecha_seguimiento ? String(fecha_seguimiento) : null;
         if (tipo_tramite !== undefined) updateData.tipo_tramite = tipo_tramite ? String(tipo_tramite).trim() : null;
         if (motivo_descarte !== undefined) updateData.motivo_descarte = motivo_descarte ? String(motivo_descarte).trim() : null;
+        if (primer_pago !== undefined) updateData.primer_pago = primer_pago ? String(primer_pago).trim() : null;
+        if (segundo_pago !== undefined) updateData.segundo_pago = segundo_pago ? String(segundo_pago).trim() : null;
 
         const { data: updatedLead, error: updateError } = await supabaseAdmin
             .from('leads')

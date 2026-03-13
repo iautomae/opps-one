@@ -33,14 +33,22 @@ interface Lead {
     fecha_seguimiento?: string;
     tipo_tramite?: string;
     motivo_descarte?: string;
+    primer_pago?: string;
+    segundo_pago?: string;
 }
 
 // --- CRM Constants ---
 const CRM_ESTADOS = [
     { value: 'Sin respuesta', label: 'Sin respuesta', color: 'bg-gray-100 text-gray-600 border-gray-200', activeColor: 'bg-gray-700 text-white border-gray-700' },
     { value: 'En seguimiento', label: 'En seguimiento', color: 'bg-blue-50 text-blue-600 border-blue-200', activeColor: 'bg-blue-600 text-white border-blue-600' },
-    { value: 'Compromiso de pago', label: 'Compromiso de pago', color: 'bg-emerald-50 text-emerald-600 border-emerald-200', activeColor: 'bg-emerald-600 text-white border-emerald-600' },
+    { value: 'Compromiso de pago', label: 'Compromiso de pago', color: 'bg-amber-50 text-amber-600 border-amber-200', activeColor: 'bg-amber-600 text-white border-amber-600' },
     { value: 'Descartado', label: 'Descartado sin interés', color: 'bg-red-50 text-red-600 border-red-200', activeColor: 'bg-red-600 text-white border-red-600' },
+];
+
+const ESTADO_FILTER_BUTTONS = [
+    { value: 'Sin respuesta', label: 'Sin respuesta', activeClass: 'bg-white text-gray-700 shadow-sm' },
+    { value: 'En seguimiento', label: 'Seguimiento', activeClass: 'bg-white text-blue-600 shadow-sm' },
+    { value: 'Compromiso de pago', label: 'Para pago', activeClass: 'bg-white text-amber-600 shadow-sm' },
 ];
 
 const MOTIVOS_DESCARTE = [
@@ -175,6 +183,8 @@ export default function DynamicLeadsDashboard() {
                 fecha_seguimiento?: string;
                 tipo_tramite?: string;
                 motivo_descarte?: string;
+                primer_pago?: string;
+                segundo_pago?: string;
             }) => {
                 const dateObj = new Date(l.created_at);
                 return {
@@ -194,7 +204,9 @@ export default function DynamicLeadsDashboard() {
                     notas_seguimiento: l.notas_seguimiento || '',
                     fecha_seguimiento: l.fecha_seguimiento || '',
                     tipo_tramite: l.tipo_tramite || '',
-                    motivo_descarte: l.motivo_descarte || ''
+                    motivo_descarte: l.motivo_descarte || '',
+                    primer_pago: l.primer_pago || '',
+                    segundo_pago: l.segundo_pago || ''
                 };
             });
             setRealLeads(formattedLeads);
@@ -211,6 +223,7 @@ export default function DynamicLeadsDashboard() {
 
     // Filter State
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'POTENCIAL' | 'NO_POTENCIAL'>('ALL');
+    const [filterEstado, setFilterEstado] = useState<string | null>(null);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -218,8 +231,9 @@ export default function DynamicLeadsDashboard() {
 
     // Lead filtering and pagination logic
     const filteredLeads = realLeads.filter(lead => {
-        if (filterStatus === 'ALL') return true;
-        return lead.status === filterStatus;
+        if (filterStatus !== 'ALL' && lead.status !== filterStatus) return false;
+        if (filterEstado && lead.estado !== filterEstado) return false;
+        return true;
     });
 
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -1376,16 +1390,24 @@ export default function DynamicLeadsDashboard() {
                                     </button>
                                 </div>
 
-                                {/* Placeholder Buttons */}
+                                {/* Estado Filter Buttons */}
                                 <div className="flex bg-gray-200/50 p-1 rounded-xl">
-                                    {[1, 2, 3].map((num) => (
-                                        <button
-                                            key={num}
-                                            className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white/50 transition-all"
-                                        >
-                                            Botón {num}
-                                        </button>
-                                    ))}
+                                    {ESTADO_FILTER_BUTTONS.map((btn) => {
+                                        const isActive = filterEstado === btn.value;
+                                        const count = realLeads.filter(l => l.estado === btn.value).length;
+                                        return (
+                                            <button
+                                                key={btn.value}
+                                                onClick={() => { setFilterEstado(isActive ? null : btn.value); setCurrentPage(1); }}
+                                                className={cn(
+                                                    "px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                                                    isActive ? btn.activeClass : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
+                                                )}
+                                            >
+                                                {btn.label} ({count})
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -1460,17 +1482,16 @@ export default function DynamicLeadsDashboard() {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center text-nowrap">
-                                                        {lead.status === 'POTENCIAL' && (
-                                                            <span className={cn(
-                                                                "px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide inline-flex justify-center border w-[110px]",
-                                                                lead.estado === 'Sin respuesta' && "bg-gray-100 text-gray-500 border-gray-200",
-                                                                lead.estado === 'En seguimiento' && "bg-blue-100 text-blue-600 border-blue-200",
-                                                                lead.estado === 'Compromiso de pago' && "bg-emerald-100 text-emerald-600 border-emerald-200",
-                                                                lead.estado === 'Descartado' && "bg-red-100 text-red-600 border-red-200"
-                                                            )}>
-                                                                {lead.estado || '—'}
-                                                            </span>
-                                                        )}
+                                                        <span className={cn(
+                                                            "px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wide inline-flex justify-center border min-w-[120px]",
+                                                            lead.estado === 'Sin respuesta' && "bg-gray-100 text-gray-500 border-gray-200",
+                                                            lead.estado === 'En seguimiento' && "bg-blue-100 text-blue-600 border-blue-200",
+                                                            lead.estado === 'Compromiso de pago' && "bg-amber-100 text-amber-600 border-amber-200",
+                                                            lead.estado === 'Descartado' && "bg-red-100 text-red-600 border-red-200",
+                                                            !lead.estado && "bg-gray-50 text-gray-300 border-gray-100"
+                                                        )}>
+                                                            {lead.estado || 'Sin estado'}
+                                                        </span>
                                                     </td>
                                                     <td className="px-4 py-1.5 border-b border-l border-gray-100 text-center">
                                                         <span className="text-[10px] font-bold text-gray-700">
@@ -2717,9 +2738,23 @@ export default function DynamicLeadsDashboard() {
                                 </div>
 
                                 {/* Scrollable Content */}
-                                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                                {(() => {
+                                    const originalLead = realLeads.find(l => l.id === crmModalLead.id);
+                                    const hasChanges = originalLead ? (
+                                        crmModalLead.estado !== originalLead.estado ||
+                                        crmModalLead.tipo_tramite !== originalLead.tipo_tramite ||
+                                        crmModalLead.notas_seguimiento !== originalLead.notas_seguimiento ||
+                                        crmModalLead.fecha_seguimiento !== originalLead.fecha_seguimiento ||
+                                        crmModalLead.motivo_descarte !== originalLead.motivo_descarte ||
+                                        crmModalLead.primer_pago !== originalLead.primer_pago ||
+                                        crmModalLead.segundo_pago !== originalLead.segundo_pago
+                                    ) : false;
+
+                                    return (
+                                        <>
+                                <div className="flex-1 overflow-y-auto p-5 space-y-4">
                                     {/* Section 1: Estado */}
-                                    <div className="space-y-2.5">
+                                    <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Estado del Lead <span className="text-red-400">*</span></label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {CRM_ESTADOS.map((est) => {
@@ -2729,7 +2764,7 @@ export default function DynamicLeadsDashboard() {
                                                         key={est.value}
                                                         onClick={() => setCrmModalLead({ ...crmModalLead, estado: est.value as any })}
                                                         className={cn(
-                                                            "h-11 rounded-xl text-[11px] font-bold border transition-all duration-200 flex items-center justify-center gap-2",
+                                                            "h-10 rounded-xl text-[11px] font-bold border transition-all duration-200 flex items-center justify-center gap-2",
                                                             isActive ? est.activeColor : est.color,
                                                             !isActive && "hover:shadow-sm hover:-translate-y-0.5"
                                                         )}
@@ -2742,8 +2777,8 @@ export default function DynamicLeadsDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* Section 2: Tipo de Trámite — campo abierto */}
-                                    <div className="space-y-2">
+                                    {/* Section 2: Tipo de Trámite */}
+                                    <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de Trámite</label>
                                         <input
                                             type="text"
@@ -2755,7 +2790,7 @@ export default function DynamicLeadsDashboard() {
                                     </div>
 
                                     {/* Section 3: Detalles de la llamada */}
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Detalles de la Llamada</label>
                                         <textarea
                                             value={crmModalLead.notas_seguimiento || ''}
@@ -2766,9 +2801,38 @@ export default function DynamicLeadsDashboard() {
                                         />
                                     </div>
 
-                                    {/* Section 4: Conditional — Date OR Motivo */}
-                                    {crmModalLead.estado === 'Descartado' ? (
+                                    {/* Section 4: Pagos — for Compromiso de pago and Pagado */}
+                                    {crmModalLead.estado === 'Compromiso de pago' && (
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <label className="text-[10px] font-bold text-amber-500 uppercase tracking-widest ml-1">Registro de Pagos</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">1er Pago</label>
+                                                    <input
+                                                        type="text"
+                                                        value={crmModalLead.primer_pago || ''}
+                                                        onChange={(e) => setCrmModalLead({ ...crmModalLead, primer_pago: e.target.value })}
+                                                        placeholder="Monto o detalle..."
+                                                        className="w-full bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-200 transition-all"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">2do Pago</label>
+                                                    <input
+                                                        type="text"
+                                                        value={crmModalLead.segundo_pago || ''}
+                                                        onChange={(e) => setCrmModalLead({ ...crmModalLead, segundo_pago: e.target.value })}
+                                                        placeholder="Monto o detalle..."
+                                                        className="w-full bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-200 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Section 5: Conditional — Motivo descarte OR Fecha */}
+                                    {crmModalLead.estado === 'Descartado' ? (
+                                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <label className="text-[10px] font-bold text-red-400 uppercase tracking-widest ml-1">Motivo del Descarte</label>
                                             <select
                                                 value={crmModalLead.motivo_descarte || ''}
@@ -2782,17 +2846,17 @@ export default function DynamicLeadsDashboard() {
                                             </select>
                                         </div>
                                     ) : (
-                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                                                Próximo Contacto
-                                            </label>
-                                            <div className="relative">
-                                                <Calendar size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Próximo Contacto</label>
+                                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center gap-3">
+                                                <div className="p-2 bg-brand-primary/10 rounded-lg text-brand-primary shrink-0">
+                                                    <Calendar size={16} />
+                                                </div>
                                                 <input
                                                     type="datetime-local"
                                                     value={crmModalLead.fecha_seguimiento ? new Date(crmModalLead.fecha_seguimiento).toISOString().slice(0, 16) : ''}
                                                     onChange={(e) => setCrmModalLead({ ...crmModalLead, fecha_seguimiento: e.target.value ? new Date(e.target.value).toISOString() : '' })}
-                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/30 transition-all"
+                                                    className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 transition-all"
                                                 />
                                             </div>
                                         </div>
@@ -2803,7 +2867,6 @@ export default function DynamicLeadsDashboard() {
                                 <div className="shrink-0 p-5 border-t border-gray-100 bg-gray-50/80">
                                     <button
                                         onClick={async () => {
-                                            // Validate: estado is required
                                             if (!crmModalLead.estado) {
                                                 setInfoModal({ isOpen: true, type: 'error', message: 'Debes seleccionar un estado para el lead.' });
                                                 return;
@@ -2819,23 +2882,33 @@ export default function DynamicLeadsDashboard() {
                                                 fecha_seguimiento: crmModalLead.fecha_seguimiento || undefined,
                                                 tipo_tramite: crmModalLead.tipo_tramite,
                                                 motivo_descarte: crmModalLead.estado === 'Descartado' ? crmModalLead.motivo_descarte : undefined,
+                                                primer_pago: crmModalLead.primer_pago || undefined,
+                                                segundo_pago: crmModalLead.segundo_pago || undefined,
                                             });
                                             setIsSavingLead(false);
                                             setCrmModalType(null);
                                         }}
                                         disabled={isSavingLead}
-                                        className="w-full bg-brand-dark text-white py-3.5 rounded-2xl font-bold text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+                                        className={cn(
+                                            "w-full py-3.5 rounded-2xl font-bold text-sm uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg",
+                                            hasChanges
+                                                ? "bg-orange-500 text-white hover:bg-orange-600"
+                                                : "bg-brand-dark text-white hover:bg-slate-800"
+                                        )}
                                     >
                                         {isSavingLead ? (
                                             <LoaderCircle size={16} className="animate-spin" />
                                         ) : (
                                             <>
                                                 <Check size={14} />
-                                                Guardar
+                                                {hasChanges ? 'Guardar Cambios' : 'Guardar'}
                                             </>
                                         )}
                                     </button>
                                 </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </>
