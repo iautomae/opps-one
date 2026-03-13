@@ -155,7 +155,10 @@ export default function DynamicLeadsDashboard() {
         // Use server-side API to bypass RLS — handles role-based filtering server-side
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`/api/leads/fetch?agent_id=${activeAgentId}`, {
+            const fetchUrl = viewAsUid
+                ? `/api/leads/fetch?agent_id=${activeAgentId}&view_as=${viewAsUid}`
+                : `/api/leads/fetch?agent_id=${activeAgentId}`;
+            const res = await fetch(fetchUrl, {
                 headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
             });
             if (res.ok) {

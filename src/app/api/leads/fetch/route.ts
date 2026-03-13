@@ -49,7 +49,25 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'No puedes consultar leads de otro tenant.' }, { status: 403 });
         }
 
-        if (profile.role === 'admin' || profile.role === 'tenant_owner') {
+        // When admin is impersonating a collaborator via view_as, apply that user's visibility filter
+        const viewAsUid = url.searchParams.get('view_as');
+        let effectiveFeatures = profile.features || {};
+
+        if (profile.role === 'admin' && viewAsUid) {
+            const { data: viewAsProfile } = await getProfileById(viewAsUid);
+            if (viewAsProfile && viewAsProfile.role === 'client') {
+                effectiveFeatures = viewAsProfile.features || {};
+            } else {
+                // Viewing as tenant_owner or unknown — show all leads
+                const { data: leads, error } = await supabaseAdmin
+                    .from('leads')
+                    .select('*')
+                    .eq('agent_id', agentId)
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                return NextResponse.json({ leads: leads || [] });
+            }
+        } else if (profile.role === 'admin' || profile.role === 'tenant_owner') {
             const { data: leads, error } = await supabaseAdmin
                 .from('leads')
                 .select('*')
@@ -60,8 +78,7 @@ export async function GET(request: Request) {
             return NextResponse.json({ leads: leads || [] });
         }
 
-        const features = profile.features || {};
-        const visibility = features.leads_visible_advisors || 'all';
+        const visibility = effectiveFeatures.leads_visible_advisors || 'all';
 
         if (visibility === 'all') {
             const { data: leads, error } = await supabaseAdmin

@@ -639,7 +639,7 @@ export default function TeamPage() {
                                                                     };
 
                                                                     return (
-                                                                        <div className="space-y-1.5">
+                                                                        <div className="space-y-0.5">
                                                                             {advisorSlots.map(slot => {
                                                                                 const isActive = selectedSlots.includes(slot.num);
                                                                                 return (
@@ -647,7 +647,7 @@ export default function TeamPage() {
                                                                                         key={slot.num}
                                                                                         onClick={() => handleToggleSlot(slot.num)}
                                                                                         className={cn(
-                                                                                            "flex items-center gap-2.5 py-2 px-2.5 rounded-lg cursor-pointer transition-all",
+                                                                                            "flex items-center gap-2.5 py-1.5 px-2.5 rounded-lg cursor-pointer transition-all",
                                                                                             isActive ? "bg-emerald-50/80" : "hover:bg-gray-50"
                                                                                         )}
                                                                                     >
