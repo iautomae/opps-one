@@ -1278,29 +1278,6 @@ export default function DynamicLeadsDashboard() {
                                         })}
                                     </div>
 
-                                    {/* Calendar Icon with Today Alert */}
-                                    {(() => {
-                                        const today = new Date().toISOString().slice(0, 10);
-                                        const todayCount = realLeads.filter(l => l.fecha_seguimiento && l.fecha_seguimiento.slice(0, 10) === today).length;
-                                        const totalScheduled = realLeads.filter(l => !!l.fecha_seguimiento).length;
-                                        return (
-                                            <button
-                                                onClick={() => setIsCalendarOpen(true)}
-                                                className="relative p-2.5 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-brand-primary/30 transition-all group"
-                                                title={`Calendario de seguimientos${todayCount > 0 ? ` — ${todayCount} para hoy` : ''}`}
-                                            >
-                                                <Calendar size={16} className="text-gray-500 group-hover:text-brand-primary transition-colors" />
-                                                {todayCount > 0 && (
-                                                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 bg-amber-400 text-white text-[9px] font-black rounded-full shadow-md shadow-amber-400/40 animate-pulse">
-                                                        {todayCount}
-                                                    </span>
-                                                )}
-                                                {todayCount === 0 && totalScheduled > 0 && (
-                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white shadow-sm" />
-                                                )}
-                                            </button>
-                                        );
-                                    })()}
                                 </div>
                             </div>
 
@@ -2757,8 +2734,8 @@ export default function DynamicLeadsDashboard() {
                                         />
                                     </div>
 
-                                    {/* Section 4: Pagos — for Compromiso de pago and Pagado */}
-                                    {(crmModalLead.estado === 'Compromiso de pago' || crmModalLead.estado === 'Pagado') && (
+                                    {/* Section 4: Pagos — solo para Compromiso de pago */}
+                                    {crmModalLead.estado === 'Compromiso de pago' && (
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                             <label className="text-[10px] font-bold text-amber-500 uppercase tracking-widest ml-1">Registro de Pagos</label>
                                             <div className="grid grid-cols-2 gap-2">
