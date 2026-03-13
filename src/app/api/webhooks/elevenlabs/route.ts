@@ -265,10 +265,32 @@ export async function POST(request: Request) {
             dataCollection.calificación?.value ||
             'PENDIENTE';
 
-        let status: 'POTENCIAL' | 'NO_POTENCIAL' = 'POTENCIAL';
-        if (calificacionVal.toUpperCase().includes('NO') || calificacionVal.toUpperCase().includes('RECHAZADO')) {
-            status = 'NO_POTENCIAL';
+        // Determine lead status: only POTENCIAL if explicitly qualified as such
+        let status: 'POTENCIAL' | 'NO_POTENCIAL' = 'NO_POTENCIAL';
+        const calUpper = calificacionVal.toUpperCase();
+        if (calUpper === 'PENDIENTE') {
+            // No qualification from ElevenLabs — check summary for interest signals
+            const sumLower = (rawSummary || '').toLowerCase();
+            const hasPositiveSignal = sumLower.includes('aceptó ser contactado') ||
+                sumLower.includes('aceptó') ||
+                sumLower.includes('proporcionó su nombre') ||
+                sumLower.includes('dejó sus datos') ||
+                sumLower.includes('interesado en') ||
+                sumLower.includes('quiere inscribirse') ||
+                sumLower.includes('quiere contratar');
+            if (hasPositiveSignal) {
+                status = 'POTENCIAL';
+            }
+        } else if (
+            calUpper.includes('POTENCIAL') &&
+            !calUpper.includes('NO POTENCIAL') &&
+            !calUpper.includes('NO_POTENCIAL')
+        ) {
+            status = 'POTENCIAL';
+        } else if (calUpper.includes('SI') || calUpper.includes('SÍ') || calUpper.includes('INTERESADO')) {
+            status = 'POTENCIAL';
         }
+        console.log(`Lead classification: calificacion="${calificacionVal}" -> status=${status}`);
 
         // 3. Bridge to Make.com
         if (finalAgent.make_webhook_url) {
