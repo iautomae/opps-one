@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ProfileProvider } from "@/hooks/useProfile";
 import { UIProvider } from "@/hooks/useUI";
 
 const inter = Inter({
@@ -23,9 +24,11 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${inter.variable} antialiased font-sans`}>
         <AuthProvider>
-          <UIProvider>
-            {children}
-          </UIProvider>
+          <ProfileProvider>
+            <UIProvider>
+              {children}
+            </UIProvider>
+          </ProfileProvider>
         </AuthProvider>
       </body>
     </html>

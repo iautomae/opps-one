@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -23,7 +23,19 @@ export type UserProfile = {
     empresa?: Company | null;
 } | null;
 
-export function useProfile() {
+type ProfileContextType = {
+    profile: UserProfile;
+    loading: boolean;
+    updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+};
+
+const ProfileContext = createContext<ProfileContextType>({
+    profile: null,
+    loading: true,
+    updateProfile: async () => { },
+});
+
+export function ProfileProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [profile, setProfile] = useState<UserProfile>(null);
     const [loading, setLoading] = useState(true);
@@ -120,9 +132,16 @@ export function useProfile() {
             if (error) throw error;
         } catch (error) {
             console.error('Error updating profile:', error);
-            // Revert on error (could be handled better with previous state, but sufficient for now)
         }
     };
 
-    return { profile, loading, updateProfile };
+    return (
+        <ProfileContext.Provider value={{ profile, loading, updateProfile }}>
+            {children}
+        </ProfileContext.Provider>
+    );
+}
+
+export function useProfile() {
+    return useContext(ProfileContext);
 }
