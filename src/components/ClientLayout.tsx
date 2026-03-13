@@ -23,15 +23,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <div className="flex bg-background min-h-screen">
             {/* Impersonation Banner */}
             {isImpersonating && profile && (
-                <div className="fixed top-0 left-0 right-0 z-[100] bg-brand-primary text-white h-9 flex items-center justify-center gap-3 shadow-lg shadow-brand-primary/20">
-                    <Eye size={14} className="opacity-80" />
-                    <span className="text-xs font-bold tracking-wide">
-                        Visualizando como: {profile.email}
-                        {profile.role === 'tenant_owner' ? ' (Propietario)' : ' (Empleado)'}
+                <div className="fixed top-0 left-0 right-0 z-[100] bg-[#0a0a0a] text-white h-9 flex items-center justify-center gap-3 shadow-lg border-b border-white/10">
+                    <Eye size={14} className="text-brand-turquoise" />
+                    <span className="text-xs font-medium tracking-wide text-white/70">
+                        Visualizando como: <span className="text-brand-turquoise font-bold">{profile.full_name || profile.email}</span>
+                        <span className="text-white/40 ml-1">
+                            {profile.role === 'tenant_owner' ? '(Propietario)' : '(Empleado)'}
+                        </span>
                     </span>
                     <button
                         onClick={exitImpersonation}
-                        className="flex items-center gap-1 ml-4 px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold rounded-lg transition-all"
+                        className="flex items-center gap-1 ml-4 px-3 py-1 bg-white/10 hover:bg-white/20 text-brand-turquoise text-[10px] font-bold rounded-lg transition-all border border-white/10"
                     >
                         <ArrowLeft size={12} />
                         Regresar a mi panel

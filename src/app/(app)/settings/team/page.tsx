@@ -33,11 +33,7 @@ const PLATFORM_TABS: Record<string, { label: string; tabs: { id: string; label: 
     },
     leads: {
         label: "Leads",
-        tabs: [
-            { id: "dashboard", label: "Dashboard" },
-            { id: "agent-config", label: "Config. Agentes" },
-            { id: "whatsapp", label: "WhatsApp" },
-        ],
+        tabs: [],
     },
     citas: {
         label: "Citas",
@@ -619,12 +615,11 @@ export default function TeamPage() {
                                                         <div className="px-3.5 pb-2 pt-0">
                                                             <div className="ml-9 pl-3 border-l-2 border-emerald-200 space-y-1">
                                                                 <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest mb-2 ml-1">
-                                                                    Leads visibles
+                                                                    Asesores asignados
                                                                 </p>
                                                                 {(() => {
-                                                                    const currentVisibility = selectedMember.features?.leads_visible_advisors || 'all';
-                                                                    const isAll = currentVisibility === 'all';
-                                                                    const selectedSlots: number[] = isAll ? [1, 2, 3] : (Array.isArray(currentVisibility) ? currentVisibility : []);
+                                                                    const currentVisibility = selectedMember.features?.leads_visible_advisors;
+                                                                    const selectedSlots: number[] = currentVisibility === 'all' ? [1, 2, 3] : (Array.isArray(currentVisibility) ? currentVisibility : []);
 
                                                                     const advisorSlots = [
                                                                         { num: 1, label: tenantAgents[0]?.pushover_user_1_name || 'Asesor 1' },
@@ -632,64 +627,43 @@ export default function TeamPage() {
                                                                         { num: 3, label: tenantAgents[0]?.pushover_user_3_name || 'Asesor 3' },
                                                                     ];
 
-                                                                    const handleToggleAll = () => {
-                                                                        updateAdvisorVisibility(selectedMember.id, isAll ? [] : 'all');
-                                                                    };
-
                                                                     const handleToggleSlot = (slot: number) => {
-                                                                        if (isAll) {
-                                                                            // Switching from "all" to specific: remove this slot
-                                                                            updateAdvisorVisibility(selectedMember.id, [1, 2, 3].filter(s => s !== slot));
-                                                                        } else {
-                                                                            const newSlots = selectedSlots.includes(slot)
-                                                                                ? selectedSlots.filter(s => s !== slot)
-                                                                                : [...selectedSlots, slot].sort();
-                                                                            // If all 3 selected, switch to "all"
-                                                                            updateAdvisorVisibility(selectedMember.id, newSlots.length === 3 ? 'all' : newSlots);
-                                                                        }
+                                                                        const newSlots = selectedSlots.includes(slot)
+                                                                            ? selectedSlots.filter(s => s !== slot)
+                                                                            : [...selectedSlots, slot].sort();
+                                                                        updateAdvisorVisibility(selectedMember.id, newSlots.length === 3 ? 'all' : newSlots);
                                                                     };
 
                                                                     return (
-                                                                        <div className="space-y-1">
-                                                                            <div
-                                                                                onClick={handleToggleAll}
-                                                                                className={cn(
-                                                                                    "flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-colors",
-                                                                                    isAll ? "bg-emerald-50" : "hover:bg-white/60"
-                                                                                )}
-                                                                            >
-                                                                                <div className={cn(
-                                                                                    "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
-                                                                                    isAll ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
-                                                                                )}>
-                                                                                    {isAll && <CheckCircle2 size={10} className="text-white" />}
-                                                                                </div>
-                                                                                <span className={cn("text-xs font-bold", isAll ? "text-emerald-700" : "text-gray-500")}>
-                                                                                    Todos los asesores
-                                                                                </span>
-                                                                            </div>
+                                                                        <div className="space-y-1.5">
                                                                             {advisorSlots.map(slot => {
-                                                                                const isActive = isAll || selectedSlots.includes(slot.num);
+                                                                                const isActive = selectedSlots.includes(slot.num);
                                                                                 return (
                                                                                     <div
                                                                                         key={slot.num}
                                                                                         onClick={() => handleToggleSlot(slot.num)}
                                                                                         className={cn(
-                                                                                            "flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-colors",
-                                                                                            isActive && !isAll ? "bg-emerald-50" : "hover:bg-white/60"
+                                                                                            "flex items-center gap-2.5 py-2 px-2.5 rounded-lg cursor-pointer transition-all",
+                                                                                            isActive ? "bg-emerald-50/80" : "hover:bg-gray-50"
                                                                                         )}
                                                                                     >
                                                                                         <div className={cn(
-                                                                                            "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
-                                                                                            isActive ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
+                                                                                            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shadow-sm",
+                                                                                            isActive
+                                                                                                ? "bg-emerald-500 border-emerald-500 shadow-emerald-500/20"
+                                                                                                : "border-gray-300 bg-white"
                                                                                         )}>
-                                                                                            {isActive && <CheckCircle2 size={10} className="text-white" />}
+                                                                                            {isActive && (
+                                                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-white">
+                                                                                                    <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                                                </svg>
+                                                                                            )}
                                                                                         </div>
                                                                                         <span className={cn(
-                                                                                            "text-xs font-medium",
-                                                                                            isActive ? "text-gray-800" : "text-gray-400"
+                                                                                            "text-xs font-semibold",
+                                                                                            isActive ? "text-emerald-800" : "text-gray-500"
                                                                                         )}>
-                                                                                            Asesor {slot.num}: {slot.label}
+                                                                                            {slot.label}
                                                                                         </span>
                                                                                     </div>
                                                                                 );
