@@ -2649,6 +2649,10 @@ export default function DynamicLeadsDashboard() {
                                     crmModalLead.status !== originalInfoLead.status ||
                                     crmModalLead.advisor_name !== originalInfoLead.advisor_name
                                 ) : false;
+                                // Para guardar: si es POTENCIAL debe tener asesor asignado
+                                const canSaveInfo = infoHasChanges && (
+                                    crmModalLead.status === 'NO_POTENCIAL' || !!crmModalLead.advisor_name
+                                );
                                 const activeAgent = agents.find(a => a.id === activeAgentId);
                                 const advisorNames = [
                                     activeAgent?.pushover_user_1_name,
@@ -2754,15 +2758,15 @@ export default function DynamicLeadsDashboard() {
                                                     setIsSavingLead(false);
                                                     setCrmModalType(null);
                                                 }}
-                                                disabled={isSavingLead}
+                                                disabled={isSavingLead || !canSaveInfo}
                                                 className={cn(
                                                     "w-full py-4 rounded-2xl font-bold text-sm uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2",
-                                                    infoHasChanges
+                                                    canSaveInfo
                                                         ? "bg-orange-500 text-white hover:bg-orange-600 shadow-lg"
-                                                        : "bg-brand-primary text-brand-dark hover:shadow-lg hover:shadow-brand-primary/20"
+                                                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
                                                 )}
                                             >
-                                                {isSavingLead ? <LoaderCircle size={16} className="animate-spin" /> : (infoHasChanges ? 'Guardar Cambios' : 'Guardar')}
+                                                {isSavingLead ? <LoaderCircle size={16} className="animate-spin" /> : (canSaveInfo ? 'Guardar Cambios' : infoHasChanges && crmModalLead.status === 'POTENCIAL' && !crmModalLead.advisor_name ? 'Selecciona un asesor' : 'Guardar')}
                                             </button>
                                         </div>
                                     </div>
