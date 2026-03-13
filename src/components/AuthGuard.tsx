@@ -47,7 +47,7 @@ function hasAnyPlatformAccess(profile: NonNullable<UserProfile>): boolean {
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const { user, loading: authLoading } = useAuth();
-    const { profile, loading: profileLoading } = useProfile();
+    const { profile, loading: profileLoading, realProfile, isImpersonating } = useProfile();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -62,8 +62,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             }
 
             if (user && profile) {
+                // Admin impersonating → skip all route guards (admin has full access)
+                if (isImpersonating) return;
                 // Super admin always has full access
-                if (profile.role === 'admin') return;
+                if (realProfile?.role === 'admin') return;
 
                 // Check if tenant_owner/user has any platform enabled
                 const hasAccess = hasAnyPlatformAccess(profile);
@@ -114,7 +116,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     // Protection during redirection
     if (!user && pathname !== '/login' && !pathname.endsWith('/set-password')) return null;
-    if (user && profile && profile.role !== 'admin' && !hasAnyPlatformAccess(profile) && pathname !== '/pending-approval') return null;
+    if (user && profile && !isImpersonating && realProfile?.role !== 'admin' && !hasAnyPlatformAccess(profile) && pathname !== '/pending-approval') return null;
 
     return <>{children}</>;
 }

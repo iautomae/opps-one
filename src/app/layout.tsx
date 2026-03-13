@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProfileProvider } from "@/hooks/useProfile";
@@ -24,11 +25,13 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${inter.variable} antialiased font-sans`}>
         <AuthProvider>
-          <ProfileProvider>
-            <UIProvider>
-              {children}
-            </UIProvider>
-          </ProfileProvider>
+          <Suspense>
+            <ProfileProvider>
+              <UIProvider>
+                {children}
+              </UIProvider>
+            </ProfileProvider>
+          </Suspense>
         </AuthProvider>
       </body>
     </html>
