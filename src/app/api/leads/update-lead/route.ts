@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { leadId, advisorName, name, status, estado, notas_seguimiento, fecha_seguimiento, tipo_tramite, motivo_descarte, primer_pago, segundo_pago } = body;
+        const { leadId, advisorName, name, status, estado, notas_seguimiento, fecha_seguimiento, tipo_tramite, motivo_descarte, primer_pago, segundo_pago, contact_history } = body;
 
         if (!leadId) {
             return NextResponse.json({ error: 'Falta el leadId.' }, { status: 400 });
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
             }
         }
 
-        const updateData: Record<string, string | null> = {};
+        const updateData: Record<string, unknown> = {};
         if (advisorName !== undefined) updateData.advisor_name = advisorName ? String(advisorName).trim() : null;
         if (name !== undefined) updateData.nombre = name ? String(name).trim() : '';
         if (status !== undefined) updateData.status = status ? String(status).trim() : '';
@@ -79,6 +79,7 @@ export async function POST(request: Request) {
         if (motivo_descarte !== undefined) updateData.motivo_descarte = motivo_descarte ? String(motivo_descarte).trim() : null;
         if (primer_pago !== undefined) updateData.primer_pago = primer_pago ? String(primer_pago).trim() : null;
         if (segundo_pago !== undefined) updateData.segundo_pago = segundo_pago ? String(segundo_pago).trim() : null;
+        if (contact_history !== undefined && Array.isArray(contact_history)) updateData.contact_history = contact_history;
 
         const { data: updatedLead, error: updateError } = await supabaseAdmin
             .from('leads')

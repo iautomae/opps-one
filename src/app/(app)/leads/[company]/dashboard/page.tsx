@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Plus, Trash2, Activity, BarChart2, CheckCircle2, X, Pencil, LoaderCircle, Settings, Bot, Download, Lock, ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Bell, RotateCcw, Shield, Rocket, Check, Calendar, MessageSquare, UserCog, CheckCheck, ExternalLink, Zap } from 'lucide-react';
+import { Plus, Trash2, Activity, BarChart2, CheckCircle2, X, Pencil, LoaderCircle, Settings, Bot, Download, Lock, ArrowLeft, ArrowRight, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Bell, RotateCcw, Shield, Rocket, Check, Calendar, MessageSquare, UserCog, CheckCheck, ExternalLink, Zap, ClipboardList, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -35,6 +35,7 @@ interface Lead {
     motivo_descarte?: string;
     primer_pago?: string;
     segundo_pago?: string;
+    contact_history?: { date: string; estado: string; notas: string; }[];
 }
 
 // --- CRM Constants ---
@@ -138,6 +139,7 @@ export default function DynamicLeadsDashboard() {
     const [crmModalLead, setCrmModalLead] = useState<Lead | null>(null);
     const [crmModalType, setCrmModalType] = useState<'INFO' | 'FOLLOW_UP' | null>(null);
     const [isSavingLead, setIsSavingLead] = useState(false);
+    const [historyLead, setHistoryLead] = useState<Lead | null>(null);
 
     // Calendar panel
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -191,6 +193,7 @@ export default function DynamicLeadsDashboard() {
                 motivo_descarte?: string;
                 primer_pago?: string;
                 segundo_pago?: string;
+                contact_history?: { date: string; estado: string; notas: string; }[];
             }) => {
                 const dateObj = new Date(l.created_at);
                 return {
@@ -212,7 +215,8 @@ export default function DynamicLeadsDashboard() {
                     tipo_tramite: l.tipo_tramite || '',
                     motivo_descarte: l.motivo_descarte || '',
                     primer_pago: l.primer_pago || '',
-                    segundo_pago: l.segundo_pago || ''
+                    segundo_pago: l.segundo_pago || '',
+                    contact_history: l.contact_history || []
                 };
             });
             setRealLeads(formattedLeads);
@@ -767,6 +771,7 @@ export default function DynamicLeadsDashboard() {
             if (updates.motivo_descarte !== undefined) apiBody.motivo_descarte = updates.motivo_descarte;
             if (updates.primer_pago !== undefined) apiBody.primer_pago = updates.primer_pago;
             if (updates.segundo_pago !== undefined) apiBody.segundo_pago = updates.segundo_pago;
+            if (updates.contact_history !== undefined) apiBody.contact_history = updates.contact_history;
 
             const res = await fetch('/api/leads/update-lead', {
                 method: 'POST',
@@ -1407,6 +1412,15 @@ export default function DynamicLeadsDashboard() {
                                                                     title="Gestionar Lead"
                                                                 >
                                                                     <Zap size={13} />
+                                                                </button>
+                                                            )}
+                                                            {lead.contact_history && lead.contact_history.length > 0 && (
+                                                                <button
+                                                                    onClick={() => setHistoryLead(lead)}
+                                                                    className="p-1.5 bg-indigo-50 text-indigo-500 border border-indigo-200 rounded-lg transition-all hover:scale-110 hover:shadow-md hover:shadow-indigo-100"
+                                                                    title="Historial de contacto"
+                                                                >
+                                                                    <ClipboardList size={13} />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -2687,7 +2701,6 @@ export default function DynamicLeadsDashboard() {
                                     const originalLead = realLeads.find(l => l.id === crmModalLead.id);
                                     const hasChanges = originalLead ? (
                                         crmModalLead.estado !== originalLead.estado ||
-                                        crmModalLead.tipo_tramite !== originalLead.tipo_tramite ||
                                         crmModalLead.notas_seguimiento !== originalLead.notas_seguimiento ||
                                         crmModalLead.fecha_seguimiento !== originalLead.fecha_seguimiento ||
                                         crmModalLead.motivo_descarte !== originalLead.motivo_descarte ||
@@ -2722,27 +2735,15 @@ export default function DynamicLeadsDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* Section 2: Tipo de Trámite */}
+                                    {/* Section 2: Tipo de Trámite + Detalles de la Llamada (merged) */}
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de Trámite</label>
-                                        <input
-                                            type="text"
-                                            value={crmModalLead.tipo_tramite || ''}
-                                            onChange={(e) => setCrmModalLead({ ...crmModalLead, tipo_tramite: e.target.value })}
-                                            placeholder="Ej: Licencia L1, Renovación, Cursos..."
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/30 transition-all"
-                                        />
-                                    </div>
-
-                                    {/* Section 3: Detalles de la llamada */}
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Detalles de la Llamada</label>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de Trámite y Detalle de Contacto</label>
                                         <textarea
                                             value={crmModalLead.notas_seguimiento || ''}
                                             onChange={(e) => setCrmModalLead({ ...crmModalLead, notas_seguimiento: e.target.value })}
-                                            rows={3}
+                                            rows={4}
                                             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/30 transition-all resize-none"
-                                            placeholder="Resumen de la conversación, interés del cliente, próximos pasos..."
+                                            placeholder="Ej: Licencia L1 — Cliente interesado, se agendó cita para el lunes..."
                                         />
                                     </div>
 
@@ -2821,14 +2822,22 @@ export default function DynamicLeadsDashboard() {
                                                 return;
                                             }
                                             setIsSavingLead(true);
+                                            // Build new contact history entry
+                                            const newHistoryEntry = {
+                                                date: new Date().toISOString(),
+                                                estado: crmModalLead.estado || '',
+                                                notas: crmModalLead.notas_seguimiento || '',
+                                            };
+                                            const prevHistory = crmModalLead.contact_history || [];
+                                            const updatedHistory = [...prevHistory, newHistoryEntry];
                                             await handleUpdateLead(crmModalLead.id, {
                                                 estado: crmModalLead.estado,
                                                 notas_seguimiento: crmModalLead.notas_seguimiento,
                                                 fecha_seguimiento: crmModalLead.fecha_seguimiento || undefined,
-                                                tipo_tramite: crmModalLead.tipo_tramite,
                                                 motivo_descarte: crmModalLead.estado === 'Descartado' ? crmModalLead.motivo_descarte : undefined,
                                                 primer_pago: crmModalLead.primer_pago || undefined,
                                                 segundo_pago: crmModalLead.segundo_pago || undefined,
+                                                contact_history: updatedHistory,
                                             });
                                             setIsSavingLead(false);
                                             setCrmModalType(null);
@@ -3000,6 +3009,108 @@ export default function DynamicLeadsDashboard() {
                         })()}
                     </div>
                 </div>
+            )}
+
+            {/* Contact History Panel */}
+            {historyLead && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] animate-in fade-in duration-300"
+                        onClick={() => setHistoryLead(null)}
+                    />
+                    <div className="fixed inset-y-0 right-0 w-full max-w-md z-[101] animate-in slide-in-from-right duration-300">
+                        <div className="h-full bg-white shadow-2xl flex flex-col border-l border-gray-200">
+                            {/* Header — Lead info */}
+                            <div className="bg-indigo-600 px-5 py-4 text-white shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                        {historyLead.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-bold truncate">{historyLead.name}</p>
+                                        <p className="text-[10px] text-white/60 font-medium">{historyLead.phone}</p>
+                                    </div>
+                                    <button onClick={() => setHistoryLead(null)} className="p-1.5 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white ml-1">
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Lead Info Card */}
+                            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+                                <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">
+                                    <Calendar size={12} />
+                                    Fecha de Registro
+                                </div>
+                                <p className="text-sm font-semibold text-gray-800">{historyLead.date} — {historyLead.time}</p>
+                                <div className="flex items-center gap-4 mt-2">
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                                        <Phone size={12} className="text-gray-400" />
+                                        {historyLead.phone}
+                                    </div>
+                                    {historyLead.advisor_name && (
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                                            <UserCog size={12} className="text-gray-400" />
+                                            {historyLead.advisor_name}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Timeline */}
+                            <div className="flex-1 overflow-y-auto px-5 py-4">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">
+                                    Historial de Contacto ({historyLead.contact_history?.length || 0})
+                                </p>
+                                <div className="relative">
+                                    {/* Vertical line */}
+                                    <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-indigo-100" />
+
+                                    <div className="space-y-4">
+                                        {[...(historyLead.contact_history || [])].reverse().map((entry, idx) => {
+                                            const entryDate = new Date(entry.date);
+                                            const estadoConfig = CRM_ESTADOS.find(e => e.value === entry.estado);
+                                            return (
+                                                <div key={idx} className="flex gap-3 relative">
+                                                    {/* Dot */}
+                                                    <div className={cn(
+                                                        "w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border-2",
+                                                        idx === 0
+                                                            ? "bg-indigo-500 border-indigo-500 text-white"
+                                                            : "bg-white border-indigo-200 text-indigo-400"
+                                                    )}>
+                                                        <MessageSquare size={10} />
+                                                    </div>
+
+                                                    {/* Content */}
+                                                    <div className={cn(
+                                                        "flex-1 rounded-xl border p-3",
+                                                        idx === 0 ? "bg-indigo-50/50 border-indigo-200" : "bg-white border-gray-100"
+                                                    )}>
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <span className={cn(
+                                                                "text-[9px] font-bold px-2 py-0.5 rounded-full border",
+                                                                estadoConfig ? estadoConfig.color : "bg-gray-100 text-gray-500 border-gray-200"
+                                                            )}>
+                                                                {entry.estado || 'Sin estado'}
+                                                            </span>
+                                                            <span className="text-[9px] text-gray-400 font-medium tabular-nums">
+                                                                {entryDate.toLocaleDateString('es-ES')} · {entryDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                        {entry.notas && (
+                                                            <p className="text-xs text-gray-700 leading-relaxed">{entry.notas}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
 
             </div >
