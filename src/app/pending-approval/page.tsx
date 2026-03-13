@@ -38,12 +38,16 @@ export default function PendingApprovalPage() {
             const hasAccess = profile.has_leads_access
                 || Object.values(profile.features || {}).some(v => v === true);
             if (hasAccess) {
-                if (profile.has_leads_access) router.push('/leads');
-                else if (profile.features?.['tramites']) router.push('/tramites');
-                else {
-                    const first = Object.entries(profile.features || {}).find(([, v]) => v === true);
-                    if (first) router.push(`/${first[0]}`);
+                // Map feature keys to known routes (keys may be custom names like "escolta_leads")
+                const ROUTE_KEYWORDS: Record<string, string> = { leads: '/leads', tramites: '/tramites', reclutamiento: '/reclutamiento', textil: '/textil', dashboard: '/dashboard' };
+                if (profile.has_leads_access) { router.push('/leads'); return; }
+                const enabledKeys = Object.entries(profile.features || {}).filter(([, v]) => v === true).map(([k]) => k);
+                for (const key of enabledKeys) {
+                    const match = Object.entries(ROUTE_KEYWORDS).find(([kw]) => key === kw || key.includes(kw));
+                    if (match) { router.push(match[1]); return; }
                 }
+                // Fallback
+                if (enabledKeys.length > 0) router.push('/leads');
             }
         }
     }, [profile, loading, router]);

@@ -51,6 +51,7 @@ function LoginContent({ subdomain }: { subdomain: string }) {
 
             if (signInError) throw signInError;
 
+            // Redirect to leads (AuthGuard will handle routing to first available feature)
             router.push('/leads');
         } catch (err: any) {
             setError(err.message || 'Error al iniciar sesión');

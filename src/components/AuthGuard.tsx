@@ -7,6 +7,38 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
+// Map feature keys (which may be custom platform names) to actual app routes
+// Feature keys are normalized: lowercase + NFD strip + underscores
+// e.g. "Escolta Leads" → "escolta_leads" should route to /leads
+const FEATURE_ROUTE_MAP: Record<string, string> = {
+    leads: '/leads',
+    tramites: '/tramites',
+    reclutamiento: '/reclutamiento',
+    textil: '/textil',
+    dashboard: '/dashboard',
+};
+
+function featureKeyToRoute(key: string): string | null {
+    // Direct match
+    if (FEATURE_ROUTE_MAP[key]) return FEATURE_ROUTE_MAP[key];
+    // Partial match: if the key contains a known route keyword (e.g. "escolta_leads" contains "leads")
+    for (const [routeKey, route] of Object.entries(FEATURE_ROUTE_MAP)) {
+        if (key.includes(routeKey)) return route;
+    }
+    return null;
+}
+
+function hasFeatureForRoute(profile: NonNullable<UserProfile>, routePrefix: string): boolean {
+    // Strip leading slash: "/leads" → "leads"
+    const routeKey = routePrefix.replace(/^\//, '');
+    if (routeKey === 'leads' && profile.has_leads_access) return true;
+    if (!profile.features) return false;
+    // Check direct key or any key that contains the route keyword
+    return Object.entries(profile.features).some(
+        ([key, val]) => val === true && (key === routeKey || key.includes(routeKey))
+    );
+}
+
 function hasAnyPlatformAccess(profile: NonNullable<UserProfile>): boolean {
     if (profile.has_leads_access) return true;
     if (profile.features && Object.values(profile.features).some(v => v === true)) return true;
@@ -45,11 +77,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                     }
 
                     // Route protection: prevent access to pages without the matching feature
-                    if (pathname.startsWith('/leads') && !profile.has_leads_access && !profile.features?.['leads']) {
+                    if (pathname.startsWith('/leads') && !hasFeatureForRoute(profile, 'leads')) {
                         router.push(getFirstAvailableRoute(profile));
                         return;
                     }
-                    if (pathname.startsWith('/tramites') && !profile.features?.['tramites']) {
+                    if (pathname.startsWith('/tramites') && !hasFeatureForRoute(profile, 'tramites')) {
                         router.push(getFirstAvailableRoute(profile));
                         return;
                     }
@@ -88,11 +120,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 function getFirstAvailableRoute(profile: NonNullable<UserProfile>): string {
-    if (profile.has_leads_access || profile.features?.['leads']) return '/leads';
-    if (profile.features?.['tramites']) return '/tramites';
-    if (profile.features?.['dashboard']) return '/dashboard';
-    // Fallback: find first enabled feature
-    const enabledFeature = Object.entries(profile.features || {}).find(([, v]) => v === true);
-    if (enabledFeature) return `/${enabledFeature[0]}`;
+    if (profile.has_leads_access) return '/leads';
+    // Check all enabled features and map them to known routes
+    const enabledFeatures = Object.entries(profile.features || {}).filter(([, v]) => v === true);
+    for (const [key] of enabledFeatures) {
+        const route = featureKeyToRoute(key);
+        if (route) return route;
+    }
+    // If there are enabled features but none map to a known route, go to leads as fallback
+    if (enabledFeatures.length > 0) return '/leads';
     return '/pending-approval';
 }
