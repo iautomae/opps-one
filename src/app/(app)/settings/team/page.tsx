@@ -79,7 +79,7 @@ interface TenantAgent {
 }
 
 export default function TeamPage() {
-    const { profile, loading: profileLoading } = useProfile();
+    const { profile, loading: profileLoading, isImpersonating, realProfile } = useProfile();
     const router = useRouter();
     const { platforms: dbPlatforms, loading: platformsLoading } = usePlatforms();
 
@@ -142,7 +142,8 @@ export default function TeamPage() {
 
     useEffect(() => {
         if (!profileLoading && profile) {
-            if (profile.role !== "tenant_owner") {
+            const canAccess = profile.role === "tenant_owner" || (isImpersonating && realProfile?.role === "admin");
+            if (!canAccess) {
                 router.push("/");
                 return;
             }
@@ -396,7 +397,7 @@ export default function TeamPage() {
         );
     }
 
-    if (!profile || profile.role !== "tenant_owner") return null;
+    if (!profile || (profile.role !== "tenant_owner" && !(isImpersonating && realProfile?.role === "admin"))) return null;
 
     return (
         <div className="bg-background animate-in fade-in duration-500 overflow-y-auto" style={{ height: "calc(100vh - 2rem)" }}>
