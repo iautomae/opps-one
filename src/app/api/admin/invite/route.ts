@@ -10,8 +10,7 @@ function slugifyCompanyName(companyName: string) {
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+        .replace(/[^a-z0-9]/g, '');
 }
 
 export async function POST(req: Request) {
@@ -94,19 +93,18 @@ export async function POST(req: Request) {
             to: normalizedEmail,
             subject: `Has sido invitado a administrar ${normalizedCompanyName} en Opps One`,
             html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
-                    <div style="text-align: center; margin-bottom: 24px;">
-                        <h1 style="color: #2CDB9B; margin: 0; font-size: 28px;">Opps One</h1>
+                <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 16px; background-color: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb;">
+                    <div style="text-align: center; margin-bottom: 12px;">
+                        <h1 style="color: #2CDB9B; margin: 0; font-size: 22px;">Opps One</h1>
                     </div>
-                    <div style="background-color: white; padding: 32px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                        <h2 style="color: #111827; margin-top: 0;">Bienvenido a tu nuevo espacio de trabajo</h2>
-                        <p style="color: #4b5563; line-height: 1.6;">
-                            Has sido invitado para administrar el entorno de <strong>${normalizedCompanyName}</strong>.
-                            Tu acceso estará disponible desde tu subdominio privado.
+                    <div style="background-color: white; padding: 20px; border-radius: 8px;">
+                        <h2 style="color: #111827; margin-top: 0; font-size: 16px;">Bienvenido a tu espacio de trabajo</h2>
+                        <p style="color: #4b5563; line-height: 1.5; font-size: 14px; margin: 8px 0 16px;">
+                            Has sido invitado para administrar <strong>${normalizedCompanyName}</strong>.
                         </p>
-                        <div style="text-align: center; margin: 32px 0;">
-                            <a href="${actionLink}" style="background-color: #2CDB9B; color: #003327; font-weight: bold; text-decoration: none; padding: 14px 28px; border-radius: 8px; display: inline-block;">
-                                Aceptar invitación y crear contraseña
+                        <div style="text-align: center; margin: 16px 0;">
+                            <a href="${actionLink}" style="background-color: #2CDB9B; color: #003327; font-weight: bold; text-decoration: none; padding: 10px 24px; border-radius: 8px; display: inline-block; font-size: 14px;">
+                                Aceptar invitación
                             </a>
                         </div>
                     </div>

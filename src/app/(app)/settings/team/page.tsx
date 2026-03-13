@@ -497,10 +497,6 @@ export default function TeamPage() {
                                                         Co-Propietario
                                                     </span>
                                                 )}
-                                                <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border inline-flex items-center gap-1", summary.color)}>
-                                                    <Shield size={8} />
-                                                    {summary.label}
-                                                </span>
                                             </div>
                                         </div>
                                     </button>

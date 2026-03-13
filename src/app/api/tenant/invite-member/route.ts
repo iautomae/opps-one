@@ -121,24 +121,23 @@ export async function POST(req: Request) {
                 to: email.trim(),
                 subject: `Has sido invitado al equipo de ${companyName} en Opps One`,
                 html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
-                        <div style="text-align: center; margin-bottom: 24px;">
-                            <h1 style="color: #2CDB9B; margin: 0; font-size: 28px;">Opps One</h1>
+                    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 16px; background-color: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb;">
+                        <div style="text-align: center; margin-bottom: 12px;">
+                            <h1 style="color: #2CDB9B; margin: 0; font-size: 22px;">Opps One</h1>
                         </div>
-                        <div style="background-color: white; padding: 32px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                            <h2 style="color: #111827; margin-top: 0;">${fullName ? `Hola ${fullName.trim()}, te` : 'Te'} han invitado al equipo</h2>
-                            <p style="color: #4b5563; line-height: 1.6;">
-                                Has sido invitado a colaborar en el equipo de <strong>${companyName}</strong>.
-                                Crea tu contraseña para comenzar a usar la plataforma.
+                        <div style="background-color: white; padding: 20px; border-radius: 8px;">
+                            <h2 style="color: #111827; margin-top: 0; font-size: 16px;">${fullName ? `Hola ${fullName.trim()}, te` : 'Te'} han invitado al equipo</h2>
+                            <p style="color: #4b5563; line-height: 1.5; font-size: 14px; margin: 8px 0 16px;">
+                                Únete al equipo de <strong>${companyName}</strong>. Crea tu contraseña para comenzar.
                             </p>
-                            <div style="text-align: center; margin: 32px 0;">
-                                <a href="${actionLink}" style="background-color: #2CDB9B; color: #003327; font-weight: bold; text-decoration: none; padding: 14px 28px; border-radius: 8px; display: inline-block;">
+                            <div style="text-align: center; margin: 16px 0;">
+                                <a href="${actionLink}" style="background-color: #2CDB9B; color: #003327; font-weight: bold; text-decoration: none; padding: 10px 24px; border-radius: 8px; display: inline-block; font-size: 14px;">
                                     Aceptar Invitación
                                 </a>
                             </div>
                         </div>
-                        <p style="text-align: center; color: #9ca3af; font-size: 12px; margin-top: 24px;">
-                            © 2026 Opps One. Todos los derechos reservados.
+                        <p style="text-align: center; color: #9ca3af; font-size: 11px; margin-top: 12px;">
+                            © 2026 Opps One
                         </p>
                     </div>
                 `
