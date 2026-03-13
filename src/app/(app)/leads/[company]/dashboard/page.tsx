@@ -2628,6 +2628,7 @@ export default function DynamicLeadsDashboard() {
                                                         updates.motivo_descarte = '';
                                                         updates.primer_pago = '';
                                                         updates.segundo_pago = '';
+                                                        updates.contact_history = [];
                                                     }
                                                     await handleUpdateLead(crmModalLead.id, updates);
                                                     setIsSavingLead(false);
