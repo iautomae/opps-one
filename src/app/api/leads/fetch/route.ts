@@ -63,7 +63,7 @@ export async function GET(request: Request) {
                     .from('leads')
                     .select('*')
                     .eq('agent_id', agentId)
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false }).range(0, 9999);
                 if (error) throw error;
                 return NextResponse.json({ leads: leads || [] });
             }
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
                 .from('leads')
                 .select('*')
                 .eq('agent_id', agentId)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }).range(0, 9999);
 
             if (error) throw error;
             return NextResponse.json({ leads: leads || [] });
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
                 .from('leads')
                 .select('*')
                 .eq('agent_id', agentId)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }).range(0, 9999);
 
             if (error) throw error;
             return NextResponse.json({ leads: leads || [] });
@@ -125,13 +125,13 @@ export async function GET(request: Request) {
                     .select('*')
                     .eq('agent_id', agentId)
                     .in('assigned_profile_id', visibleProfileIds)
-                    .order('created_at', { ascending: false }),
+                    .order('created_at', { ascending: false }).range(0, 9999),
                 supabaseAdmin
                     .from('leads')
                     .select('*')
                     .eq('agent_id', agentId)
                     .in('advisor_name', visibleAdvisorNames)
-                    .order('created_at', { ascending: false }),
+                    .order('created_at', { ascending: false }).range(0, 9999),
             ]);
 
             if (profileLeadsError) throw profileLeadsError;
@@ -145,7 +145,7 @@ export async function GET(request: Request) {
                 .select('*')
                 .eq('agent_id', agentId)
                 .in('assigned_profile_id', visibleProfileIds)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }).range(0, 9999);
             if (error) throw error;
             leads = (data || []) as LeadRow[];
         } else {
@@ -154,7 +154,7 @@ export async function GET(request: Request) {
                 .select('*')
                 .eq('agent_id', agentId)
                 .in('advisor_name', visibleAdvisorNames)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }).range(0, 9999);
             if (error) throw error;
             leads = (data || []) as LeadRow[];
         }
