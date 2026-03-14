@@ -155,36 +155,6 @@ export default function DynamicLeadsDashboard() {
 
     // Lead Stats
     const [realLeads, setRealLeads] = useState<Lead[]>([]);
-    const [leadCounts, setLeadCounts] = useState<{ all: number; potencial: number; no_potencial: number; estados: Record<string, number> } | null>(null);
-    const [totalFiltered, setTotalFiltered] = useState(0);
-    const [serverTotalPages, setServerTotalPages] = useState(1);
-    const [calendarLeads, setCalendarLeads] = useState<Lead[]>([]);
-
-    const formatLeadData = (l: any): Lead => {
-        const dateObj = new Date(l.created_at);
-        return {
-            id: l.id,
-            phone: l.phone || 'No proveído',
-            transcript: l.transcript || [],
-            created_at: l.created_at,
-            name: l.nombre || 'Lead Desconocido',
-            date: dateObj.toLocaleDateString('es-ES'),
-            time: dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-            status: (l.status as 'POTENCIAL' | 'NO_POTENCIAL') || 'POTENCIAL',
-            summary: l.summary || 'Sin resumen',
-            score: l.score || 0,
-            tokens_billed: l.tokens_billed || 0,
-            advisor_name: l.advisor_name || '',
-            estado: (l.estado as any) || '',
-            notas_seguimiento: l.notas_seguimiento || '',
-            fecha_seguimiento: l.fecha_seguimiento || '',
-            tipo_tramite: l.tipo_tramite || '',
-            motivo_descarte: l.motivo_descarte || '',
-            primer_pago: l.primer_pago || '',
-            segundo_pago: l.segundo_pago || '',
-            contact_history: l.contact_history || []
-        };
-    };
 
     const fetchLeads = React.useCallback(async () => {
         if (!activeAgentId) {
@@ -196,23 +166,15 @@ export default function DynamicLeadsDashboard() {
         // Use server-side API to bypass RLS — handles role-based filtering server-side
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const params = new URLSearchParams({
-                agent_id: activeAgentId,
-                page: String(currentPage),
-                page_size: String(itemsPerPage),
-                status: filterStatus,
-            });
-            if (filterEstado) params.set('estado', filterEstado);
-            if (viewAsUid) params.set('view_as', viewAsUid);
-            const res = await fetch(`/api/leads/fetch?${params}`, {
+            const fetchUrl = viewAsUid
+                ? `/api/leads/fetch?agent_id=${activeAgentId}&view_as=${viewAsUid}`
+                : `/api/leads/fetch?agent_id=${activeAgentId}`;
+            const res = await fetch(fetchUrl, {
                 headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
             });
             if (res.ok) {
                 const json = await res.json();
                 leadData = json.leads;
-                if (json.counts) setLeadCounts(json.counts);
-                if (json.total !== undefined) setTotalFiltered(json.total);
-                if (json.total_pages !== undefined) setServerTotalPages(json.total_pages);
             } else {
                 const errJson = await res.json();
                 error = errJson.error;
@@ -222,27 +184,34 @@ export default function DynamicLeadsDashboard() {
         }
 
         if (leadData && !error) {
-            setRealLeads(leadData.map(formatLeadData));
+            const formattedLeads: Lead[] = leadData.map((l: any) => {
+                const dateObj = new Date(l.created_at);
+                return {
+                    id: l.id,
+                    phone: l.phone || 'No proveído',
+                    transcript: l.transcript || [],
+                    created_at: l.created_at,
+                    name: l.nombre || 'Lead Desconocido',
+                    date: dateObj.toLocaleDateString('es-ES'),
+                    time: dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                    status: (l.status as 'POTENCIAL' | 'NO_POTENCIAL') || 'POTENCIAL',
+                    summary: l.summary || 'Sin resumen',
+                    score: l.score || 0,
+                    tokens_billed: l.tokens_billed || 0,
+                    advisor_name: l.advisor_name || '',
+                    estado: (l.estado as any) || '',
+                    notas_seguimiento: l.notas_seguimiento || '',
+                    fecha_seguimiento: l.fecha_seguimiento || '',
+                    tipo_tramite: l.tipo_tramite || '',
+                    motivo_descarte: l.motivo_descarte || '',
+                    primer_pago: l.primer_pago || '',
+                    segundo_pago: l.segundo_pago || '',
+                    contact_history: l.contact_history || []
+                };
+            });
+            setRealLeads(formattedLeads);
         } else if (error) {
             console.error('Error fetching leads:', error);
-        }
-    }, [activeAgentId, currentPage, itemsPerPage, filterStatus, filterEstado, viewAsUid]);
-
-    const fetchCalendarLeads = React.useCallback(async () => {
-        if (!activeAgentId) return;
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const params = new URLSearchParams({ agent_id: activeAgentId, calendar_only: 'true' });
-            if (viewAsUid) params.set('view_as', viewAsUid);
-            const res = await fetch(`/api/leads/fetch?${params}`, {
-                headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-            });
-            if (res.ok) {
-                const json = await res.json();
-                setCalendarLeads((json.calendar_leads || []).map(formatLeadData));
-            }
-        } catch (e) {
-            console.error('Error fetching calendar leads:', e);
         }
     }, [activeAgentId, viewAsUid]);
 
@@ -251,8 +220,31 @@ export default function DynamicLeadsDashboard() {
     const [panelTab, setPanelTab] = useState<'SUMMARY' | 'CHAT'>('SUMMARY');
     // const [messages, setMessages] = useState<{ role: 'user' | 'assistant', text: string }[]>([]);
 
-    // Server-side pagination — realLeads is already the current page
-    const totalPages = serverTotalPages;
+    // Pipeline estados — leads with these move out of main panel into estado tabs
+    const PIPELINE_ESTADOS = ['Sin respuesta', 'En seguimiento', 'Compromiso de pago', 'Pagado'];
+
+    // Client-side filtering and pagination
+    const filteredLeads = realLeads.filter(lead => {
+        if (filterEstado) {
+            // Estado tab: show only leads with this specific estado
+            return lead.status === 'POTENCIAL' && lead.estado === filterEstado;
+        }
+        // Main panel: exclude pipeline leads (they live in estado tabs)
+        if (lead.status === 'POTENCIAL' && PIPELINE_ESTADOS.includes(lead.estado || '')) return false;
+        if (filterStatus !== 'ALL' && lead.status !== filterStatus) return false;
+        return true;
+    });
+
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const paginatedLeads = filteredLeads.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+
+    // Counts for tabs (main panel excludes pipeline leads)
+    const mainPanelLeads = realLeads.filter(l => !(l.status === 'POTENCIAL' && PIPELINE_ESTADOS.includes(l.estado || '')));
+    const countAll = mainPanelLeads.length;
+    const countPotencial = mainPanelLeads.filter(l => l.status === 'POTENCIAL').length;
+    const countNoPotencial = mainPanelLeads.filter(l => l.status === 'NO_POTENCIAL').length;
 
     // Modal States
     const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string, name: string } | null>(null);
@@ -275,21 +267,17 @@ export default function DynamicLeadsDashboard() {
         }
     }, [activeAgentId, agents, isLoading, isClient, isTenantOwner]);
 
-    // Stable refs to avoid restarting the polling interval
+    // Stable ref for fetchLeads to avoid restarting the polling interval
     const fetchLeadsRef = React.useRef(fetchLeads);
     React.useEffect(() => { fetchLeadsRef.current = fetchLeads; }, [fetchLeads]);
-    const fetchCalendarRef = React.useRef(fetchCalendarLeads);
-    React.useEffect(() => { fetchCalendarRef.current = fetchCalendarLeads; }, [fetchCalendarLeads]);
 
     // Fetch leads effect with polling (realtime blocked by RLS for tenant_owners/clients)
     React.useEffect(() => {
         if (view === 'LEADS' && user?.id && activeAgentId) {
             fetchLeadsRef.current();
-            fetchCalendarRef.current();
 
             const interval = setInterval(() => {
                 fetchLeadsRef.current();
-                fetchCalendarRef.current();
             }, 15000); // Poll every 15 seconds
 
             return () => {
@@ -795,7 +783,6 @@ export default function DynamicLeadsDashboard() {
             }
             // Refetch to ensure consistency with DB
             fetchLeadsRef.current();
-            fetchCalendarRef.current();
         } catch (error) {
             console.error('Error updating lead:', error);
             setInfoModal({ isOpen: true, type: 'error', message: 'Error al actualizar el lead.' });
@@ -1242,7 +1229,7 @@ export default function DynamicLeadsDashboard() {
                                             filterStatus === 'ALL' && !filterEstado ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"
                                         )}
                                     >
-                                        Todos ({leadCounts?.all ?? 0})
+                                        Todos ({countAll})
                                     </button>
                                     <button
                                         onClick={() => { setFilterStatus('NO_POTENCIAL'); setFilterEstado(null); setCurrentPage(1); }}
@@ -1251,7 +1238,7 @@ export default function DynamicLeadsDashboard() {
                                             filterStatus === 'NO_POTENCIAL' && !filterEstado ? "bg-white text-red-600 shadow-sm" : "text-gray-500 hover:text-red-500"
                                         )}
                                     >
-                                        No Aptos ({leadCounts?.no_potencial ?? 0})
+                                        No Aptos ({countNoPotencial})
                                     </button>
                                     <button
                                         onClick={() => { setFilterStatus('POTENCIAL'); setFilterEstado(null); setCurrentPage(1); }}
@@ -1260,7 +1247,7 @@ export default function DynamicLeadsDashboard() {
                                             filterStatus === 'POTENCIAL' && !filterEstado ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-emerald-600"
                                         )}
                                     >
-                                        Aptos ({leadCounts?.potencial ?? 0})
+                                        Aptos ({countPotencial})
                                     </button>
                                 </div>
 
@@ -1269,7 +1256,7 @@ export default function DynamicLeadsDashboard() {
                                     <div className="flex bg-gray-300/60 p-1 rounded-xl shadow-sm border border-gray-100/30">
                                         {ESTADO_FILTER_BUTTONS.map((btn) => {
                                             const isActive = filterEstado === btn.value;
-                                            const count = leadCounts?.estados?.[btn.value] ?? 0;
+                                            const count = realLeads.filter(l => l.status === 'POTENCIAL' && l.estado === btn.value).length;
                                             return (
                                                 <button
                                                     key={btn.value}
@@ -1288,8 +1275,8 @@ export default function DynamicLeadsDashboard() {
                                     {/* Calendar Icon with Today Alert */}
                                     {(() => {
                                         const today = new Date().toISOString().slice(0, 10);
-                                        const todayCount = calendarLeads.filter(l => l.fecha_seguimiento && l.fecha_seguimiento.slice(0, 10) === today).length;
-                                        const totalScheduled = calendarLeads.length;
+                                        const todayCount = realLeads.filter(l => l.fecha_seguimiento && l.fecha_seguimiento.slice(0, 10) === today).length;
+                                        const totalScheduled = realLeads.filter(l => !!l.fecha_seguimiento).length;
                                         return (
                                             <button
                                                 onClick={() => setIsCalendarOpen(true)}
@@ -1329,7 +1316,7 @@ export default function DynamicLeadsDashboard() {
                                             </tr >
                                         </thead >
                                         <tbody className="divide-y divide-gray-100">
-                                            {realLeads.map((lead) => (
+                                            {paginatedLeads.map((lead) => (
                                                 <tr
                                                     key={lead.id}
                                                     className="bg-white hover:bg-gray-100 transition-colors group"
@@ -1462,7 +1449,7 @@ export default function DynamicLeadsDashboard() {
                                             <option value={100}>100 Filas</option>
                                         </select>
                                         <p className="text-[10px] text-gray-400 font-medium ml-2">
-                                            {Math.min(currentPage * itemsPerPage, totalFiltered)} de {totalFiltered}
+                                            {Math.min(indexOfLastItem, filteredLeads.length)} de {filteredLeads.length}
                                         </p>
                                     </div>
 
@@ -2890,7 +2877,9 @@ export default function DynamicLeadsDashboard() {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
                         {(() => {
                             const today = new Date().toISOString().slice(0, 10);
-                            const scheduledLeads = calendarLeads;
+                            const scheduledLeads = realLeads
+                                .filter(l => !!l.fecha_seguimiento)
+                                .sort((a, b) => new Date(a.fecha_seguimiento!).getTime() - new Date(b.fecha_seguimiento!).getTime());
 
                             // Group by date
                             const grouped: Record<string, Lead[]> = {};

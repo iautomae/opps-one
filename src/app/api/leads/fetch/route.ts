@@ -25,16 +25,6 @@ function buildOrFilter(visibleProfileIds: string[], visibleAdvisorNames: string[
     return clauses.length > 0 ? clauses.join(',') : null;
 }
 
-// Estados that move leads into the pipeline (out of the main panel)
-const PIPELINE_ESTADOS = ['Sin respuesta', 'En seguimiento', 'Compromiso de pago', 'Pagado'];
-const ESTADO_VALUES = ['Sin respuesta', 'En seguimiento', 'Compromiso de pago', 'Pagado', 'Descartado'];
-
-// Helper: exclude pipeline leads from main panel queries
-// Main panel shows: leads NOT in active pipeline (excludes Sin respuesta, En seguimiento, Compromiso de pago, Pagado)
-function applyMainPanelFilter(query: any) {
-    return query.not('estado', 'in', `(${PIPELINE_ESTADOS.join(',')})`);
-}
-
 export async function GET(request: Request) {
     try {
         const { context, response } = await requireAuth(request, ['admin', 'tenant_owner', 'client']);
@@ -48,13 +38,6 @@ export async function GET(request: Request) {
         if (!agentId) {
             return NextResponse.json({ error: 'agent_id es requerido.' }, { status: 400 });
         }
-
-        // Pagination params
-        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
-        const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page_size') || '15', 10)));
-        const statusFilter = url.searchParams.get('status') || 'ALL'; // ALL, POTENCIAL, NO_POTENCIAL
-        const estadoFilter = url.searchParams.get('estado') || null;
-        const calendarOnly = url.searchParams.get('calendar_only') === 'true';
 
         const { data: agent, error: agentError } = await supabaseAdmin
             .from('agentes')
@@ -84,7 +67,7 @@ export async function GET(request: Request) {
         }
 
         // --- Resolve visibility ---
-        let orFilter: string | null = null; // null = show all leads
+        let orFilter: string | null = null;
 
         const viewAsUid = url.searchParams.get('view_as');
         let effectiveFeatures = profile.features || {};
@@ -97,7 +80,6 @@ export async function GET(request: Request) {
         } else if (profile.role === 'admin' || profile.role === 'tenant_owner') {
             // orFilter stays null — show all
         } else {
-            // Client role — check visibility
             const visibility = effectiveFeatures.leads_visible_advisors || 'all';
             if (visibility !== 'all') {
                 const slots = Array.isArray(visibility) ? visibility : [];
@@ -118,10 +100,7 @@ export async function GET(request: Request) {
                     if (advisorName) visibleAdvisorNames.push(advisorName);
                 }
                 if (visibleProfileIds.length === 0 && visibleAdvisorNames.length === 0) {
-                    return NextResponse.json({
-                        leads: [], total: 0, page, page_size: pageSize, total_pages: 0,
-                        counts: { all: 0, potencial: 0, no_potencial: 0, estados: Object.fromEntries(ESTADO_VALUES.map(e => [e, 0])) }
-                    });
+                    return NextResponse.json({ leads: [] });
                 }
                 orFilter = buildOrFilter(visibleProfileIds, visibleAdvisorNames);
             }
@@ -149,125 +128,25 @@ export async function GET(request: Request) {
                     if (advisorName) visibleAdvisorNames.push(advisorName);
                 }
                 if (visibleProfileIds.length === 0 && visibleAdvisorNames.length === 0) {
-                    return NextResponse.json({
-                        leads: [], total: 0, page, page_size: pageSize, total_pages: 0,
-                        counts: { all: 0, potencial: 0, no_potencial: 0, estados: Object.fromEntries(ESTADO_VALUES.map(e => [e, 0])) }
-                    });
+                    return NextResponse.json({ leads: [] });
                 }
                 orFilter = buildOrFilter(visibleProfileIds, visibleAdvisorNames);
             }
         }
 
-        // --- Calendar-only mode ---
-        if (calendarOnly) {
-            let q = supabaseAdmin
-                .from('leads')
-                .select('*')
-                .eq('agent_id', agentId)
-                .not('fecha_seguimiento', 'is', null)
-                .order('fecha_seguimiento', { ascending: true })
-                .range(0, 999);
-            q = applyVisibility(q, orFilter);
-            const { data, error } = await q;
-            if (error) throw error;
-            return NextResponse.json({ calendar_leads: data || [] });
-        }
-
-        // --- Determine if we're in "main panel" or "pipeline/estado" mode ---
-        const isEstadoView = !!estadoFilter; // Viewing a specific estado tab (pipeline)
-        const isMainPanel = !isEstadoView;   // Viewing Todos/Aptos/No Aptos
-
-        // --- Build count queries (parallel) ---
-        // Main panel counts: only leads NOT in pipeline (no estado, empty, or Descartado)
-        const buildBaseQuery = () => {
-            let q = supabaseAdmin
-                .from('leads')
-                .select('*', { count: 'exact', head: true })
-                .eq('agent_id', agentId);
-            return applyVisibility(q, orFilter);
-        };
-
-        // Main panel counts (exclude pipeline leads)
-        const mainAllCount = applyMainPanelFilter(buildBaseQuery());
-        const mainPotencialCount = applyMainPanelFilter(buildBaseQuery().eq('status', 'POTENCIAL'));
-        const mainNoPotencialCount = buildBaseQuery().eq('status', 'NO_POTENCIAL'); // NO_POTENCIAL always in main panel
-
-        // Estado/pipeline counts (each specific estado)
-        const estadoCountPromises = ESTADO_VALUES.map(e =>
-            buildBaseQuery().eq('status', 'POTENCIAL').eq('estado', e)
-        );
-
-        const countPromises = [
-            mainAllCount,
-            mainPotencialCount,
-            mainNoPotencialCount,
-            ...estadoCountPromises,
-        ];
-
-        // --- Build data query ---
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize - 1;
-
-        let dataQuery = supabaseAdmin
+        // --- Fetch all leads (up to 5000) — client-side filtering is instant ---
+        let q = supabaseAdmin
             .from('leads')
             .select('*')
-            .eq('agent_id', agentId);
-        dataQuery = applyVisibility(dataQuery, orFilter);
+            .eq('agent_id', agentId)
+            .order('created_at', { ascending: false })
+            .range(0, 4999);
+        q = applyVisibility(q, orFilter);
 
-        if (isEstadoView) {
-            // Pipeline view: show leads with this specific estado
-            dataQuery = dataQuery.eq('status', 'POTENCIAL').eq('estado', estadoFilter);
-        } else {
-            // Main panel: exclude pipeline leads
-            if (statusFilter === 'POTENCIAL') dataQuery = dataQuery.eq('status', 'POTENCIAL');
-            if (statusFilter === 'NO_POTENCIAL') dataQuery = dataQuery.eq('status', 'NO_POTENCIAL');
-            dataQuery = applyMainPanelFilter(dataQuery);
-        }
-        dataQuery = dataQuery.order('created_at', { ascending: false }).range(from, to);
+        const { data: leads, error } = await q;
+        if (error) throw error;
 
-        // Count for current filtered view
-        let filteredCountQuery = supabaseAdmin
-            .from('leads')
-            .select('*', { count: 'exact', head: true })
-            .eq('agent_id', agentId);
-        filteredCountQuery = applyVisibility(filteredCountQuery, orFilter);
-
-        if (isEstadoView) {
-            filteredCountQuery = filteredCountQuery.eq('status', 'POTENCIAL').eq('estado', estadoFilter);
-        } else {
-            if (statusFilter === 'POTENCIAL') filteredCountQuery = filteredCountQuery.eq('status', 'POTENCIAL');
-            if (statusFilter === 'NO_POTENCIAL') filteredCountQuery = filteredCountQuery.eq('status', 'NO_POTENCIAL');
-            filteredCountQuery = applyMainPanelFilter(filteredCountQuery);
-        }
-
-        // Execute all in parallel
-        const [countResults, dataResult, filteredCountResult] = await Promise.all([
-            Promise.all(countPromises),
-            dataQuery,
-            filteredCountQuery,
-        ]);
-
-        if (dataResult.error) throw dataResult.error;
-        if (filteredCountResult.error) throw filteredCountResult.error;
-
-        const totalFiltered = filteredCountResult.count || 0;
-        const totalPages = Math.ceil(totalFiltered / pageSize);
-
-        const counts = {
-            all: countResults[0].count || 0,
-            potencial: countResults[1].count || 0,
-            no_potencial: countResults[2].count || 0,
-            estados: Object.fromEntries(ESTADO_VALUES.map((e, i) => [e, countResults[3 + i].count || 0])),
-        };
-
-        return NextResponse.json({
-            leads: dataResult.data || [],
-            total: totalFiltered,
-            page,
-            page_size: pageSize,
-            total_pages: totalPages,
-            counts,
-        });
+        return NextResponse.json({ leads: leads || [] });
     } catch (error: unknown) {
         console.error('Error fetching leads:', error);
         return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
