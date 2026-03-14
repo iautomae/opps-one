@@ -140,7 +140,7 @@ export async function GET(request: Request) {
             .select('*')
             .eq('agent_id', agentId)
             .order('created_at', { ascending: false })
-            .range(0, 4999);
+            .range(0, 1999);
         q = applyVisibility(q, orFilter);
 
         const { data: leads, error } = await q;
