@@ -25,7 +25,15 @@ function buildOrFilter(visibleProfileIds: string[], visibleAdvisorNames: string[
     return clauses.length > 0 ? clauses.join(',') : null;
 }
 
+// Estados that move leads into the pipeline (out of the main panel)
+const PIPELINE_ESTADOS = ['Sin respuesta', 'En seguimiento', 'Compromiso de pago', 'Pagado'];
 const ESTADO_VALUES = ['Sin respuesta', 'En seguimiento', 'Compromiso de pago', 'Pagado', 'Descartado'];
+
+// Helper: exclude pipeline leads from main panel queries
+// Main panel shows: leads with no estado, empty estado, or estado='Descartado'
+function applyMainPanelFilter(query: any) {
+    return query.or('estado.is.null,estado.eq.,estado.eq.Descartado');
+}
 
 export async function GET(request: Request) {
     try {
@@ -86,7 +94,6 @@ export async function GET(request: Request) {
             if (viewAsProfile && viewAsProfile.role === 'client') {
                 effectiveFeatures = viewAsProfile.features || {};
             }
-            // else: viewing as tenant_owner — orFilter stays null (show all)
         } else if (profile.role === 'admin' || profile.role === 'tenant_owner') {
             // orFilter stays null — show all
         } else {
@@ -120,7 +127,7 @@ export async function GET(request: Request) {
             }
         }
 
-        // Also handle the client + view_as resolved visibility
+        // Handle admin + view_as resolved visibility for client profiles
         if (profile.role === 'admin' && viewAsUid) {
             const visibility = effectiveFeatures.leads_visible_advisors || 'all';
             if (visibility !== 'all') {
@@ -166,23 +173,35 @@ export async function GET(request: Request) {
             return NextResponse.json({ calendar_leads: data || [] });
         }
 
+        // --- Determine if we're in "main panel" or "pipeline/estado" mode ---
+        const isEstadoView = !!estadoFilter; // Viewing a specific estado tab (pipeline)
+        const isMainPanel = !isEstadoView;   // Viewing Todos/Aptos/No Aptos
+
         // --- Build count queries (parallel) ---
-        const buildCountQuery = (extraFilters?: { status?: string; estado?: string }) => {
+        // Main panel counts: only leads NOT in pipeline (no estado, empty, or Descartado)
+        const buildBaseQuery = () => {
             let q = supabaseAdmin
                 .from('leads')
                 .select('*', { count: 'exact', head: true })
                 .eq('agent_id', agentId);
-            q = applyVisibility(q, orFilter);
-            if (extraFilters?.status) q = q.eq('status', extraFilters.status);
-            if (extraFilters?.estado) q = q.eq('estado', extraFilters.estado);
-            return q;
+            return applyVisibility(q, orFilter);
         };
 
+        // Main panel counts (exclude pipeline leads)
+        const mainAllCount = applyMainPanelFilter(buildBaseQuery());
+        const mainPotencialCount = applyMainPanelFilter(buildBaseQuery().eq('status', 'POTENCIAL'));
+        const mainNoPotencialCount = buildBaseQuery().eq('status', 'NO_POTENCIAL'); // NO_POTENCIAL always in main panel
+
+        // Estado/pipeline counts (each specific estado)
+        const estadoCountPromises = ESTADO_VALUES.map(e =>
+            buildBaseQuery().eq('status', 'POTENCIAL').eq('estado', e)
+        );
+
         const countPromises = [
-            buildCountQuery(),                                    // all
-            buildCountQuery({ status: 'POTENCIAL' }),            // potencial
-            buildCountQuery({ status: 'NO_POTENCIAL' }),         // no_potencial
-            ...ESTADO_VALUES.map(e => buildCountQuery({ status: 'POTENCIAL', estado: e })), // each estado (only for potencial)
+            mainAllCount,
+            mainPotencialCount,
+            mainNoPotencialCount,
+            ...estadoCountPromises,
         ];
 
         // --- Build data query ---
@@ -194,20 +213,32 @@ export async function GET(request: Request) {
             .select('*')
             .eq('agent_id', agentId);
         dataQuery = applyVisibility(dataQuery, orFilter);
-        if (statusFilter === 'POTENCIAL') dataQuery = dataQuery.eq('status', 'POTENCIAL');
-        if (statusFilter === 'NO_POTENCIAL') dataQuery = dataQuery.eq('status', 'NO_POTENCIAL');
-        if (estadoFilter) dataQuery = dataQuery.eq('estado', estadoFilter);
+
+        if (isEstadoView) {
+            // Pipeline view: show leads with this specific estado
+            dataQuery = dataQuery.eq('status', 'POTENCIAL').eq('estado', estadoFilter);
+        } else {
+            // Main panel: exclude pipeline leads
+            if (statusFilter === 'POTENCIAL') dataQuery = dataQuery.eq('status', 'POTENCIAL');
+            if (statusFilter === 'NO_POTENCIAL') dataQuery = dataQuery.eq('status', 'NO_POTENCIAL');
+            dataQuery = applyMainPanelFilter(dataQuery);
+        }
         dataQuery = dataQuery.order('created_at', { ascending: false }).range(from, to);
 
-        // Also get the count for the current filter combination
+        // Count for current filtered view
         let filteredCountQuery = supabaseAdmin
             .from('leads')
             .select('*', { count: 'exact', head: true })
             .eq('agent_id', agentId);
         filteredCountQuery = applyVisibility(filteredCountQuery, orFilter);
-        if (statusFilter === 'POTENCIAL') filteredCountQuery = filteredCountQuery.eq('status', 'POTENCIAL');
-        if (statusFilter === 'NO_POTENCIAL') filteredCountQuery = filteredCountQuery.eq('status', 'NO_POTENCIAL');
-        if (estadoFilter) filteredCountQuery = filteredCountQuery.eq('estado', estadoFilter);
+
+        if (isEstadoView) {
+            filteredCountQuery = filteredCountQuery.eq('status', 'POTENCIAL').eq('estado', estadoFilter);
+        } else {
+            if (statusFilter === 'POTENCIAL') filteredCountQuery = filteredCountQuery.eq('status', 'POTENCIAL');
+            if (statusFilter === 'NO_POTENCIAL') filteredCountQuery = filteredCountQuery.eq('status', 'NO_POTENCIAL');
+            filteredCountQuery = applyMainPanelFilter(filteredCountQuery);
+        }
 
         // Execute all in parallel
         const [countResults, dataResult, filteredCountResult] = await Promise.all([
