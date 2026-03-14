@@ -58,14 +58,7 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'No puedes modificar leads de otro tenant.' }, { status: 403 });
             }
 
-            // Extra restriction for clients: must be assigned or own the lead
-            if (
-                context.profile.role === 'client' &&
-                context.profile.id !== lead.assigned_profile_id &&
-                context.profile.id !== lead.user_id
-            ) {
-                return NextResponse.json({ error: 'No tienes permisos para editar este lead.' }, { status: 403 });
-            }
+            // Clients can edit leads from their tenant (hasAccess already validated above)
         }
 
         const updateData: Record<string, unknown> = {};
