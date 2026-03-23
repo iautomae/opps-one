@@ -144,6 +144,11 @@ export default function DynamicLeadsDashboard() {
 
     // Calendar panel
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState(() => {
+        const now = new Date();
+        return { year: now.getFullYear(), month: now.getMonth() };
+    });
+    const [calendarSelectedDay, setCalendarSelectedDay] = useState<string | null>(null);
 
     // Filter State
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'POTENCIAL' | 'NO_POTENCIAL'>('ALL');
@@ -2871,12 +2876,14 @@ export default function DynamicLeadsDashboard() {
                         </div>
                     </>
                 )}
-            {/* Calendar Panel — Scheduled Follow-ups */}
+            {/* Calendar Panel — 30-Day Monthly View */}
             {isCalendarOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsCalendarOpen(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setIsCalendarOpen(false); setCalendarSelectedDay(null); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
                         {(() => {
                             const today = new Date().toISOString().slice(0, 10);
+                            const { year, month } = calendarMonth;
+
                             const scheduledLeads = realLeads
                                 .filter(l => !!l.fecha_seguimiento)
                                 .sort((a, b) => new Date(a.fecha_seguimiento!).getTime() - new Date(b.fecha_seguimiento!).getTime());
@@ -2888,21 +2895,68 @@ export default function DynamicLeadsDashboard() {
                                 if (!grouped[dateKey]) grouped[dateKey] = [];
                                 grouped[dateKey].push(lead);
                             }
-                            const dateKeys = Object.keys(grouped).sort();
 
-                            const formatDate = (dateStr: string) => {
-                                if (dateStr === today) return 'Hoy';
-                                const tomorrow = new Date();
-                                tomorrow.setDate(tomorrow.getDate() + 1);
-                                if (dateStr === tomorrow.toISOString().slice(0, 10)) return 'Mañana';
-                                const d = new Date(dateStr + 'T12:00:00');
-                                return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                            // Calendar grid
+                            const firstDay = new Date(year, month, 1);
+                            const lastDay = new Date(year, month + 1, 0);
+                            const startDow = firstDay.getDay(); // 0=Sun
+                            const daysInMonth = lastDay.getDate();
+                            const monthName = firstDay.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+
+                            // Peruvian holidays (fixed dates)
+                            const holidays: Record<string, string> = {
+                                [`${year}-01-01`]: 'Año Nuevo',
+                                [`${year}-05-01`]: 'Día del Trabajo',
+                                [`${year}-06-29`]: 'San Pedro y San Pablo',
+                                [`${year}-07-28`]: 'Fiestas Patrias',
+                                [`${year}-07-29`]: 'Fiestas Patrias',
+                                [`${year}-08-06`]: 'Batalla de Junín',
+                                [`${year}-08-30`]: 'Santa Rosa de Lima',
+                                [`${year}-10-08`]: 'Combate de Angamos',
+                                [`${year}-11-01`]: 'Día de Todos los Santos',
+                                [`${year}-12-08`]: 'Inmaculada Concepción',
+                                [`${year}-12-09`]: 'Batalla de Ayacucho',
+                                [`${year}-12-25`]: 'Navidad',
                             };
 
-                            const formatTime = (isoStr: string) => {
-                                const d = new Date(isoStr);
-                                return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                            // Easter-based holidays (approximate for common years)
+                            const easterHolidays = (y: number) => {
+                                // Butcher's algorithm for Easter
+                                const a = y % 19, b = Math.floor(y / 100), c = y % 100;
+                                const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+                                const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+                                const i = Math.floor(c / 4), k = c % 4;
+                                const l = (32 + 2 * e + 2 * i - h - k) % 7;
+                                const m = Math.floor((a + 11 * h + 22 * l) / 451);
+                                const em = Math.floor((h + l - 7 * m + 114) / 31);
+                                const ed = ((h + l - 7 * m + 114) % 31) + 1;
+                                const easter = new Date(y, em - 1, ed);
+                                const holyThursday = new Date(easter); holyThursday.setDate(easter.getDate() - 3);
+                                const goodFriday = new Date(easter); goodFriday.setDate(easter.getDate() - 2);
+                                const fmt = (d: Date) => d.toISOString().slice(0, 10);
+                                return {
+                                    [fmt(holyThursday)]: 'Jueves Santo',
+                                    [fmt(goodFriday)]: 'Viernes Santo',
+                                };
                             };
+                            const allHolidays = { ...holidays, ...easterHolidays(year) };
+
+                            const prevMonth = () => setCalendarMonth(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 });
+                            const nextMonth = () => setCalendarMonth(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 });
+                            const goToday = () => { const n = new Date(); setCalendarMonth({ year: n.getFullYear(), month: n.getMonth() }); setCalendarSelectedDay(today); };
+
+                            const formatTime = (isoStr: string) => new Date(isoStr).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+                            // Build cells
+                            const cells: { day: number | null; dateStr: string }[] = [];
+                            for (let i = 0; i < startDow; i++) cells.push({ day: null, dateStr: '' });
+                            for (let d = 1; d <= daysInMonth; d++) {
+                                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                cells.push({ day: d, dateStr });
+                            }
+
+                            const selectedDayLeads = calendarSelectedDay ? (grouped[calendarSelectedDay] || []) : [];
+                            const selectedHoliday = calendarSelectedDay ? allHolidays[calendarSelectedDay] : null;
 
                             return (
                                 <>
@@ -2917,96 +2971,202 @@ export default function DynamicLeadsDashboard() {
                                                 <p className="text-xs text-gray-500">{scheduledLeads.length} contacto{scheduledLeads.length !== 1 ? 's' : ''} agendado{scheduledLeads.length !== 1 ? 's' : ''}</p>
                                             </div>
                                         </div>
-                                        <button onClick={() => setIsCalendarOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                                        <button onClick={() => { setIsCalendarOpen(false); setCalendarSelectedDay(null); }} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
                                             <X size={18} className="text-gray-400" />
                                         </button>
                                     </div>
 
-                                    {/* Content */}
-                                    <div className="overflow-y-auto p-6 space-y-5" style={{ maxHeight: 'calc(80vh - 72px)' }}>
-                                        {dateKeys.length === 0 ? (
-                                            <div className="text-center py-12">
-                                                <Calendar size={40} className="text-gray-200 mx-auto mb-3" />
-                                                <p className="text-sm font-bold text-gray-400">No hay seguimientos agendados</p>
-                                                <p className="text-xs text-gray-300 mt-1">Agenda fechas de contacto desde el CRM de cada lead.</p>
+                                    {/* Month Navigation */}
+                                    <div className="px-6 py-3 flex items-center justify-between border-b border-gray-50">
+                                        <button onClick={prevMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                            <ChevronLeft size={18} className="text-gray-500" />
+                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-sm font-bold text-gray-800 capitalize">{monthName}</h3>
+                                            <button onClick={goToday} className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-full hover:bg-brand-primary/20 transition-colors">
+                                                Hoy
+                                            </button>
+                                        </div>
+                                        <button onClick={nextMonth} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                            <ChevronRight size={18} className="text-gray-500" />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex divide-x divide-gray-100" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+                                        {/* Calendar Grid */}
+                                        <div className="flex-1 p-4">
+                                            {/* Day Headers */}
+                                            <div className="grid grid-cols-7 mb-1">
+                                                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
+                                                    <div key={d} className="text-[10px] font-bold text-gray-400 text-center py-1 uppercase tracking-wider">{d}</div>
+                                                ))}
                                             </div>
-                                        ) : (
-                                            dateKeys.map(dateKey => {
-                                                const isToday = dateKey === today;
-                                                const isPast = dateKey < today;
-                                                return (
-                                                    <div key={dateKey}>
-                                                        {/* Date Header */}
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            {isToday && (
-                                                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+
+                                            {/* Day Cells */}
+                                            <div className="grid grid-cols-7 gap-px">
+                                                {cells.map((cell, idx) => {
+                                                    if (!cell.day) return <div key={`empty-${idx}`} className="aspect-square" />;
+                                                    const isToday2 = cell.dateStr === today;
+                                                    const isPast = cell.dateStr < today;
+                                                    const isSelected = cell.dateStr === calendarSelectedDay;
+                                                    const dayLeads = grouped[cell.dateStr] || [];
+                                                    const holiday = allHolidays[cell.dateStr];
+                                                    const isSunday = new Date(cell.dateStr + 'T12:00:00').getDay() === 0;
+
+                                                    return (
+                                                        <div
+                                                            key={cell.dateStr}
+                                                            onClick={() => setCalendarSelectedDay(isSelected ? null : cell.dateStr)}
+                                                            className={cn(
+                                                                "aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all relative group",
+                                                                isSelected ? "bg-brand-primary text-white shadow-lg scale-105" :
+                                                                isToday2 ? "bg-amber-50 border-2 border-amber-300 hover:border-amber-400" :
+                                                                holiday ? "bg-red-50/50 hover:bg-red-50" :
+                                                                isPast ? "hover:bg-gray-50 opacity-50" :
+                                                                "hover:bg-gray-50"
                                                             )}
-                                                            <h3 className={cn(
-                                                                "text-xs font-black uppercase tracking-widest",
-                                                                isToday ? "text-amber-600" : isPast ? "text-red-400" : "text-gray-400"
+                                                        >
+                                                            <span className={cn(
+                                                                "text-sm font-bold leading-none",
+                                                                isSelected ? "text-white" :
+                                                                isToday2 ? "text-amber-700" :
+                                                                (holiday || isSunday) ? "text-red-400" :
+                                                                isPast ? "text-gray-400" : "text-gray-700"
                                                             )}>
-                                                                {formatDate(dateKey)}
-                                                            </h3>
-                                                            {isPast && !isToday && (
-                                                                <span className="text-[9px] font-bold text-red-400 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">Vencido</span>
-                                                            )}
-                                                            <span className="text-[9px] text-gray-300 font-medium">{grouped[dateKey].length} lead{grouped[dateKey].length !== 1 ? 's' : ''}</span>
-                                                        </div>
+                                                                {cell.day}
+                                                            </span>
 
-                                                        {/* Leads for this date */}
-                                                        <div className="space-y-2">
-                                                            {grouped[dateKey].map(lead => (
-                                                                <div
-                                                                    key={lead.id}
-                                                                    onClick={() => {
-                                                                        setIsCalendarOpen(false);
-                                                                        setSelectedLead(lead);
-                                                                        setCrmModalLead(lead);
-                                                                        setCrmModalType('FOLLOW_UP');
-                                                                    }}
-                                                                    className={cn(
-                                                                        "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5",
-                                                                        isToday ? "bg-amber-50/50 border-amber-200 hover:border-amber-300" : isPast ? "bg-red-50/30 border-red-100 hover:border-red-200" : "bg-white border-gray-100 hover:border-gray-200"
-                                                                    )}
-                                                                >
-                                                                    {/* Time */}
-                                                                    <div className={cn(
-                                                                        "text-xs font-bold tabular-nums shrink-0 w-12 text-center",
-                                                                        isToday ? "text-amber-600" : isPast ? "text-red-400" : "text-gray-400"
-                                                                    )}>
-                                                                        {formatTime(lead.fecha_seguimiento!)}
-                                                                    </div>
-
-                                                                    <div className="w-px h-8 bg-gray-200 shrink-0" />
-
-                                                                    {/* Lead Info */}
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="text-sm font-bold text-gray-900 truncate">{lead.name}</p>
-                                                                        <p className="text-[10px] text-gray-400 truncate">{lead.phone}{lead.advisor_name ? ` · ${lead.advisor_name}` : ''}</p>
-                                                                    </div>
-
-                                                                    {/* Estado Badge */}
-                                                                    {lead.estado && (
+                                                            {/* Lead count dots */}
+                                                            {dayLeads.length > 0 && (
+                                                                <div className="flex items-center gap-0.5 mt-0.5">
+                                                                    {dayLeads.length <= 3 ? (
+                                                                        dayLeads.map((_, i) => (
+                                                                            <span key={i} className={cn(
+                                                                                "w-1 h-1 rounded-full",
+                                                                                isSelected ? "bg-white/80" : "bg-brand-primary"
+                                                                            )} />
+                                                                        ))
+                                                                    ) : (
                                                                         <span className={cn(
-                                                                            "text-[9px] font-bold px-2 py-1 rounded-full border shrink-0",
-                                                                            lead.estado === 'En seguimiento' ? "bg-blue-50 text-blue-600 border-blue-200"
-                                                                                : lead.estado === 'Compromiso de pago' ? "bg-amber-50 text-amber-600 border-amber-200"
-                                                                                : lead.estado === 'Pagado' ? "bg-green-50 text-green-600 border-green-200"
-                                                                                : lead.estado === 'Sin respuesta' ? "bg-gray-50 text-gray-500 border-gray-200"
-                                                                                : "bg-gray-50 text-gray-500 border-gray-200"
-                                                                        )}>
-                                                                            {lead.estado}
-                                                                        </span>
+                                                                            "text-[8px] font-black leading-none",
+                                                                            isSelected ? "text-white/80" : "text-brand-primary"
+                                                                        )}>{dayLeads.length}</span>
                                                                     )}
-
-                                                                    <ArrowRight size={14} className="text-gray-300 shrink-0" />
                                                                 </div>
+                                                            )}
+
+                                                            {/* Holiday indicator */}
+                                                            {holiday && !isSelected && (
+                                                                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-400" />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Holiday Legend */}
+                                            {(() => {
+                                                const monthHolidays = Object.entries(allHolidays).filter(([d]) => d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`));
+                                                if (monthHolidays.length === 0) return null;
+                                                return (
+                                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Feriados del mes</p>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {monthHolidays.map(([d, name]) => (
+                                                                <span key={d} className="text-[9px] text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md border border-red-100">
+                                                                    {parseInt(d.slice(8))} - {name}
+                                                                </span>
                                                             ))}
                                                         </div>
                                                     </div>
                                                 );
-                                            })
-                                        )}
+                                            })()}
+                                        </div>
+
+                                        {/* Side Panel — Selected Day Detail */}
+                                        <div className="w-72 overflow-y-auto p-4 bg-gray-50/30" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+                                            {!calendarSelectedDay ? (
+                                                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                                                    <Calendar size={28} className="text-gray-200 mb-2" />
+                                                    <p className="text-xs font-bold text-gray-400">Selecciona un día</p>
+                                                    <p className="text-[10px] text-gray-300 mt-1">Haz clic en una fecha para ver los seguimientos agendados.</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="mb-3">
+                                                        <h4 className="text-sm font-bold text-gray-800 capitalize">
+                                                            {new Date(calendarSelectedDay + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                                        </h4>
+                                                        {selectedHoliday && (
+                                                            <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-100 inline-block mt-1">
+                                                                {selectedHoliday}
+                                                            </span>
+                                                        )}
+                                                        {calendarSelectedDay === today && (
+                                                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 inline-block mt-1 ml-1">
+                                                                Hoy
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {selectedDayLeads.length === 0 ? (
+                                                        <div className="text-center py-8">
+                                                            <p className="text-xs text-gray-400">Sin seguimientos para este día</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{selectedDayLeads.length} seguimiento{selectedDayLeads.length !== 1 ? 's' : ''}</p>
+                                                            {selectedDayLeads.map(lead => {
+                                                                const isPastDay = calendarSelectedDay < today;
+                                                                return (
+                                                                    <div
+                                                                        key={lead.id}
+                                                                        onClick={() => {
+                                                                            setIsCalendarOpen(false);
+                                                                            setCalendarSelectedDay(null);
+                                                                            setSelectedLead(lead);
+                                                                            setCrmModalLead(lead);
+                                                                            setCrmModalType('FOLLOW_UP');
+                                                                        }}
+                                                                        className={cn(
+                                                                            "p-3 rounded-xl border cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5",
+                                                                            calendarSelectedDay === today ? "bg-amber-50/50 border-amber-200 hover:border-amber-300" :
+                                                                            isPastDay ? "bg-red-50/30 border-red-100 hover:border-red-200" :
+                                                                            "bg-white border-gray-100 hover:border-gray-200"
+                                                                        )}
+                                                                    >
+                                                                        <div className="flex items-center gap-2 mb-1">
+                                                                            <span className={cn(
+                                                                                "text-[10px] font-bold tabular-nums",
+                                                                                calendarSelectedDay === today ? "text-amber-600" : isPastDay ? "text-red-400" : "text-gray-400"
+                                                                            )}>
+                                                                                {formatTime(lead.fecha_seguimiento!)}
+                                                                            </span>
+                                                                            {isPastDay && (
+                                                                                <span className="text-[8px] font-bold text-red-400 bg-red-50 px-1 py-0.5 rounded border border-red-100">Vencido</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-xs font-bold text-gray-900 truncate">{lead.name}</p>
+                                                                        <p className="text-[10px] text-gray-400 truncate">{lead.phone}{lead.advisor_name ? ` · ${lead.advisor_name}` : ''}</p>
+                                                                        {lead.estado && (
+                                                                            <span className={cn(
+                                                                                "text-[8px] font-bold px-1.5 py-0.5 rounded-full border inline-block mt-1.5",
+                                                                                lead.estado === 'En seguimiento' ? "bg-blue-50 text-blue-600 border-blue-200"
+                                                                                    : lead.estado === 'Compromiso de pago' ? "bg-amber-50 text-amber-600 border-amber-200"
+                                                                                    : lead.estado === 'Pagado' ? "bg-green-50 text-green-600 border-green-200"
+                                                                                    : "bg-gray-50 text-gray-500 border-gray-200"
+                                                                            )}>
+                                                                                {lead.estado}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </>
                             );
