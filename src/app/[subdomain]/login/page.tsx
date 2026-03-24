@@ -53,9 +53,13 @@ function LoginContent({ subdomain }: { subdomain: string }) {
 
             // Mark tenant as active on first successful login (via API to bypass RLS)
             if (subdomain) {
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
                 fetch('/api/tenant/mark-active', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentSession?.access_token || ''}`,
+                    },
                     body: JSON.stringify({ slug: subdomain }),
                 }).catch(() => {});
             }

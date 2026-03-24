@@ -24,6 +24,7 @@ export default function SetPasswordPage({
     const [success, setSuccess] = useState(false);
     const [sessionReady, setSessionReady] = useState(false);
     const [checkingSession, setCheckingSession] = useState(true);
+    const [isRecovery, setIsRecovery] = useState(false);
 
     // Load tenant branding
     useEffect(() => {
@@ -44,12 +45,19 @@ export default function SetPasswordPage({
         loadTenant();
     }, [subdomain]);
 
-    // Handle auth session from invite link hash fragment
+    // Handle auth session from invite link or recovery hash fragment
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout | null = null;
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('[set-password] Auth event:', event, 'Session:', !!session);
 
+            if (event === 'PASSWORD_RECOVERY') {
+                setIsRecovery(true);
+            }
+
             if (session?.user) {
+                if (timeoutId) clearTimeout(timeoutId);
                 setEmail(session.user.email || '');
                 setSessionReady(true);
                 setCheckingSession(false);
@@ -64,15 +72,17 @@ export default function SetPasswordPage({
                 setSessionReady(true);
                 setCheckingSession(false);
             } else {
-                // Give Supabase client time to process the hash fragment
-                setTimeout(() => {
+                // Wait for onAuthStateChange to process the hash fragment
+                // Use a longer timeout as fallback for slow connections
+                timeoutId = setTimeout(() => {
                     setCheckingSession(false);
-                }, 3000);
+                }, 10000);
             }
         };
         checkExisting();
 
         return () => {
+            if (timeoutId) clearTimeout(timeoutId);
             subscription.unsubscribe();
         };
     }, []);
@@ -107,20 +117,32 @@ export default function SetPasswordPage({
             });
 
             // Mark tenant as active (account confirmed) via API to bypass RLS
-            if (subdomain) {
+            if (subdomain && !isRecovery) {
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
                 fetch('/api/tenant/mark-active', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentSession?.access_token || ''}`,
+                    },
                     body: JSON.stringify({ slug: subdomain }),
                 }).catch(() => {});
             }
 
             setSuccess(true);
 
-            // Redirect to CRM after success
-            setTimeout(() => {
-                router.push('/leads');
-            }, 2000);
+            if (isRecovery) {
+                // Recovery: sign out and redirect to login for a clean session
+                setTimeout(async () => {
+                    await supabase.auth.signOut();
+                    router.push('/login');
+                }, 2000);
+            } else {
+                // Invite: redirect to CRM directly
+                setTimeout(() => {
+                    router.push('/leads');
+                }, 2000);
+            }
 
         } catch (err: any) {
             setError(err.message || 'Error al actualizar la contraseña');
@@ -188,13 +210,16 @@ export default function SetPasswordPage({
                         <div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-bold uppercase tracking-wider mx-auto mb-4">
                                 <ShieldCheck size={14} />
-                                Configuración de Acceso
+                                {isRecovery ? 'Recuperación de Acceso' : 'Configuración de Acceso'}
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900">
-                                Crea tu contraseña
+                                {isRecovery ? 'Restablece tu contraseña' : 'Crea tu contraseña'}
                             </h2>
                             <p className="mt-2 text-sm text-gray-500 font-medium">
-                                Establece una contraseña segura para tu acceso en <strong>{companyName}</strong>.
+                                {isRecovery
+                                    ? 'Ingresa tu nueva contraseña para recuperar el acceso.'
+                                    : <>Establece una contraseña segura para tu acceso en <strong>{companyName}</strong>.</>
+                                }
                             </p>
                         </div>
 
@@ -267,7 +292,7 @@ export default function SetPasswordPage({
                                 className="w-full mt-4 py-3 rounded-xl text-white font-semibold shadow-md border hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
                                 style={{ backgroundColor: primaryColor, borderColor: primaryColor }}
                             >
-                                {isLoading ? <LoaderCircle className="animate-spin" size={20} /> : 'Activar mi cuenta'}
+                                {isLoading ? <LoaderCircle className="animate-spin" size={20} /> : isRecovery ? 'Restablecer contraseña' : 'Activar mi cuenta'}
                             </button>
                         </form>
                     </>
@@ -276,8 +301,13 @@ export default function SetPasswordPage({
                         <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
                             <CheckCircle2 className="w-6 h-6 text-green-600" />
                         </div>
-                        <h3 className="text-xl font-bold">¡Cuenta activada!</h3>
-                        <p className="text-sm">Tu contraseña ha sido guardada. Redirigiendo a tu panel...</p>
+                        <h3 className="text-xl font-bold">{isRecovery ? '¡Contraseña restablecida!' : '¡Cuenta activada!'}</h3>
+                        <p className="text-sm">
+                            {isRecovery
+                                ? 'Tu contraseña ha sido actualizada. Redirigiendo al inicio de sesión...'
+                                : 'Tu contraseña ha sido guardada. Redirigiendo a tu panel...'
+                            }
+                        </p>
                         <LoaderCircle className="animate-spin mx-auto text-green-500" size={24} />
                     </div>
                 )}

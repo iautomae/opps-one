@@ -96,9 +96,13 @@ export default function SetPasswordPage() {
                 .maybeSingle();
 
             if (userProfile?.tenant_id) {
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
                 fetch('/api/tenant/mark-active', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentSession?.access_token || ''}`,
+                    },
                     body: JSON.stringify({ tenant_id: userProfile.tenant_id }),
                 }).catch(() => {});
             }

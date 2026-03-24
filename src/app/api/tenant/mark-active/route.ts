@@ -1,8 +1,26 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/server-auth';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
     try {
+        // Verify the user is authenticated
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        const supabaseAuth = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+        }
+
         const { slug, tenant_id } = await request.json();
         if (!slug && !tenant_id) {
             return NextResponse.json({ error: 'slug o tenant_id requerido' }, { status: 400 });
