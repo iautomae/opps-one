@@ -223,6 +223,29 @@ export default function DynamicLeadsDashboard() {
     // Side Panel State
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [panelTab, setPanelTab] = useState<'SUMMARY' | 'CHAT'>('SUMMARY');
+    const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
+
+    const handleOpenChat = async () => {
+        setPanelTab('CHAT');
+        if (selectedLead && (!selectedLead.transcript || selectedLead.transcript.length === 0)) {
+            setIsLoadingTranscript(true);
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const res = await fetch(`/api/leads/transcript?id=${selectedLead.id}`, {
+                    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+                });
+                if (res.ok) {
+                    const json = await res.json();
+                    setSelectedLead(prev => prev ? { ...prev, transcript: json.transcript } : prev);
+                    setRealLeads(prev => prev.map(l => l.id === selectedLead.id ? { ...l, transcript: json.transcript } : l));
+                }
+            } catch (error) {
+                console.error('Error fetching transcript:', error);
+            } finally {
+                setIsLoadingTranscript(false);
+            }
+        }
+    };
     // const [messages, setMessages] = useState<{ role: 'user' | 'assistant', text: string }[]>([]);
 
     // Pipeline estados — leads with these move out of main panel into estado tabs
@@ -283,7 +306,7 @@ export default function DynamicLeadsDashboard() {
 
             const interval = setInterval(() => {
                 fetchLeadsRef.current();
-            }, 15000); // Poll every 15 seconds
+            }, 30000); // Poll every 30 seconds
 
             return () => {
                 clearInterval(interval);
@@ -1894,7 +1917,7 @@ export default function DynamicLeadsDashboard() {
                                             Resumen
                                         </button>
                                         <button
-                                            onClick={() => setPanelTab('CHAT')}
+                                            onClick={handleOpenChat}
                                             className={cn(
                                                 "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
                                                 panelTab === 'CHAT' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
@@ -1917,7 +1940,12 @@ export default function DynamicLeadsDashboard() {
                                         <div className="flex flex-col h-full min-h-0">
                                             {/* Transcript Content */}
                                             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 relative">
-                                                {selectedLead.transcript && selectedLead.transcript.length > 0 ? (
+                                                {isLoadingTranscript ? (
+                                                    <div className="flex flex-col items-center justify-center p-12 text-center">
+                                                        <LoaderCircle size={32} className="text-gray-400 animate-spin mb-2" />
+                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Cargando historial...</p>
+                                                    </div>
+                                                ) : selectedLead.transcript && selectedLead.transcript.length > 0 ? (
                                                     selectedLead.transcript.map((msg: { role: string; message?: string; text?: string; time?: string }, idx: number) => (
                                                         <div key={idx} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
                                                             <div className={cn(

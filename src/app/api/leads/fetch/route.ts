@@ -137,10 +137,10 @@ export async function GET(request: Request) {
         // --- Fetch all leads (up to 5000) — client-side filtering is instant ---
         let q = supabaseAdmin
             .from('leads')
-            .select('*')
+            .select('id, agent_id, user_id, eleven_labs_conversation_id, nombre, status, summary, phone, tokens_raw, tokens_billed, advisor_name, assigned_profile_id, estado, notas_seguimiento, fecha_seguimiento, tipo_tramite, motivo_descarte, primer_pago, segundo_pago, created_at, contact_history')
             .eq('agent_id', agentId)
             .order('created_at', { ascending: false })
-            .range(0, 1999);
+            .range(0, 199);
         q = applyVisibility(q, orFilter);
 
         const { data: leads, error } = await q;
