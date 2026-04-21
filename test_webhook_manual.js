@@ -8,20 +8,24 @@ if (!SECRET) {
     process.exit(1);
 }
 
-const WEBHOOK_URL = 'https://iautomae-platform.vercel.app/api/webhooks/elevenlabs';
+const WEBHOOK_URL = 'https://opps.one/api/webhooks/elevenlabs';
 // OJO: Asegúrate de que esta URL es la correcta de tu proyecto (la que copiaste antes)
 
 const payload = {
-    conversation_id: 'test_conv_123',
-    agent_id: 'test_agent_id', // Si pones uno real, intentará guardar el lead.
-    transcript: [
-        { role: 'user', message: 'Hola, quiero información' },
-        { role: 'agent', message: 'Claro, ¿cómo te llamas?' }
-    ],
-    analysis: {
-        data_collection_results: {
-            nombre: { value: 'Tester' },
-            telefono: { value: '555-0000' }
+    type: 'post_call_transcription',
+    data: {
+        conversation_id: 'test_conv_' + Date.now(),
+        agent_id: 'agent_8001kmdjn3t0ezft8hqwq1k0bv78', // ID de Omar
+        transcript: [
+            { role: 'user', message: 'Hola Omar, ¿cómo estás?' },
+            { role: 'agent', message: 'Hola, soy Omar. ¿En qué puedo ayudarte?' }
+        ],
+        analysis: {
+            data_collection_results: {
+                nombre: { value: 'Test User' },
+                resumen_conversacion: { value: 'El usuario saludó a Omar para probar el webhook.' },
+                calificacion: { value: 'POTENCIAL' }
+            }
         }
     }
 };
