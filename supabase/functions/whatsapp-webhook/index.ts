@@ -7,8 +7,12 @@ const CORS_HEADERS = {
 };
 
 // Obtenemos los secretos desde el entorno
-const VERIFY_TOKEN = Deno.env.get("WHATSAPP_VERIFY_TOKEN") || "secury_webhook_2026";
+const VERIFY_TOKEN = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || ""; // Tu key de AI Studio
+
+if (!VERIFY_TOKEN) {
+    throw new Error("WHATSAPP_VERIFY_TOKEN is missing in environment");
+}
 
 Deno.serve(async (req) => {
     if (req.method === "OPTIONS") {

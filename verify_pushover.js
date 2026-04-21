@@ -1,8 +1,12 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Hardcoding for debugging purposes as dotenv seems to have issues in this specific execution context
-const supabaseUrl = 'https://spuwnpwzboytmywfyyxr.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwdXducHd6Ym95dG15d2Z5eXhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzMTc2MDYsImV4cCI6MjA4NDg5MzYwNn0.REGztCeY1JzsmRBk5-Vb6HuBGrA5J5HX7iCl4ySChNk';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('Error: Las variables de entorno de Supabase no están definidas. Por favor, inyéctalas usando Doppler.');
+    process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

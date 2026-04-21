@@ -1,7 +1,13 @@
 const crypto = require('crypto');
 
 // --- CONFIGURA AQUÍ TUS DATOS ---
-const SECRET = 'wsec_959f8a992e32b69b39267c920ab77cf54f7b872626819555b0d191ac2a613679';
+const SECRET = process.env.ELEVENLABS_WEBHOOK_SECRET;
+
+if (!SECRET) {
+    console.error('Error: La variable de entorno ELEVENLABS_WEBHOOK_SECRET no está definida. Por favor, inyéctala usando Doppler.');
+    process.exit(1);
+}
+
 const WEBHOOK_URL = 'https://iautomae-platform.vercel.app/api/webhooks/elevenlabs';
 // OJO: Asegúrate de que esta URL es la correcta de tu proyecto (la que copiaste antes)
 
