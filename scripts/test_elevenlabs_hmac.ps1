@@ -19,7 +19,7 @@ function ConvertTo-Hex($Bytes) {
 }
 
 $secret = Get-DopplerSecret "ELEVENLABS_WEBHOOK_SECRET"
-$timestamp = [int][double]::Parse((Get-Date -UFormat %s))
+$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
 $payloadObject = @{
     type            = "post_call_transcription"
