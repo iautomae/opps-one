@@ -1,21 +1,20 @@
 const crypto = require('crypto');
 
-// --- CONFIGURA AQUÍ TUS DATOS ---
 const SECRET = process.env.ELEVENLABS_WEBHOOK_SECRET;
+const WEBHOOK_URL = process.env.ELEVENLABS_WEBHOOK_URL || 'https://opps.one/api/webhooks/elevenlabs';
+const AGENT_ID = process.env.ELEVENLABS_AGENT_ID || 'agent_8001kmdjn3t0ezft8hqwq1k0bv78';
 
 if (!SECRET) {
     console.error('Error: La variable de entorno ELEVENLABS_WEBHOOK_SECRET no está definida. Por favor, inyéctala usando Doppler.');
     process.exit(1);
 }
 
-const WEBHOOK_URL = 'https://opps.one/api/webhooks/elevenlabs';
-// OJO: Asegúrate de que esta URL es la correcta de tu proyecto (la que copiaste antes)
-
 const payload = {
     type: 'post_call_transcription',
+    event_timestamp: Math.floor(Date.now() / 1000),
     data: {
         conversation_id: 'test_conv_' + Date.now(),
-        agent_id: 'agent_8001kmdjn3t0ezft8hqwq1k0bv78', // ID de Omar
+        agent_id: AGENT_ID,
         transcript: [
             { role: 'user', message: 'Hola Omar, ¿cómo estás?' },
             { role: 'agent', message: 'Hola, soy Omar. ¿En qué puedo ayudarte?' }
@@ -32,12 +31,14 @@ const payload = {
 
 const bodyText = JSON.stringify(payload);
 
-// Calcular la firma HMAC (Igual que hace ElevenLabs)
-const hmac = crypto.createHmac('sha256', SECRET);
-const signature = hmac.update(bodyText).digest('hex');
+// ElevenLabs signs: "t=timestamp,v0=hmac_sha256(timestamp.body)"
+const timestamp = Math.floor(Date.now() / 1000).toString();
+const signedPayload = `${timestamp}.${bodyText}`;
+const digest = crypto.createHmac('sha256', SECRET).update(signedPayload).digest('hex');
+const signature = `t=${timestamp},v0=${digest}`;
 
 console.log('Enviando petición a:', WEBHOOK_URL);
-console.log('Firma generada:', signature);
+console.log('Firma generada: [SET]');
 
 fetch(WEBHOOK_URL, {
     method: 'POST',

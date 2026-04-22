@@ -28,9 +28,9 @@ He realizado un análisis profundo de la base de código y detectado "agujeros" 
    - **Solución:** Limpiar los scripts para que consuman `process.env.ELEVENLABS_WEBHOOK_SECRET` y `process.env.SUPABASE_ANON_KEY`, forzando el uso de Doppler (`doppler run -- node ...`).
 
 2. **Etapa Backend Edge Functions (Media Vulnerabilidad):**
-   - **Agujero:** En la función de Supabase `whatsapp-webhook/index.ts`, la variable `VERIFY_TOKEN` tiene un valor de respaldo expuesto en texto plano (`|| "secury_webhook_2026"`).
-   - **Impacto:** Si la variable de entorno no se inyecta correctamente al desplegar la función, el webhook acepta automáticamente `"secury_webhook_2026"` como contraseña para suscribirse a eventos de WhatsApp. Esto es muy predecible.
-   - **Solución:** Eliminar el respaldo `|| "secury_webhook_2026"` y forzar que arroje error si no se pasa la configuración secreta por consola (`supabase secrets set`).
+   - **Agujero:** En la función de Supabase `whatsapp-webhook/index.ts`, la variable `VERIFY_TOKEN` tenía un valor de respaldo expuesto en texto plano.
+   - **Impacto:** Si la variable de entorno no se inyecta correctamente al desplegar la función, el webhook podría aceptar una contraseña predecible para suscribirse a eventos de WhatsApp.
+   - **Solución:** Eliminar el respaldo en texto plano y forzar que arroje error si no se pasa la configuración secreta por consola (`supabase secrets set`).
 
 3. **Etapa Configuración General de Base de Datos y APIs (Baja Vulnerabilidad, pero riesgoso):**
    - **Observación:** Muchos scripts como `check-db.js`, `scripts/audit-leads.js`, etc., usan correctamente `process.env.NEXT_PUBLIC_SUPABASE_URL` y `process.env.SUPABASE_SERVICE_ROLE_KEY`. Sin embargo, dependen de `.env` locales que pueden filtrarse si no están bien en el `.gitignore`.
@@ -59,48 +59,57 @@ He realizado un análisis profundo de la base de código y detectado "agujeros" 
 
 ---
 
-## 🛡️ Fase 4: Mejoras de Seguridad para Escalar (Pendientes)
+## 🤖 Estado del Webhook de ElevenLabs (Omar)
 
-Identificadas en auditoría del 21/04/2026. Implementar en orden de prioridad:
+Tras la auditoría y restauración del 21/04/2026:
+- **ID Webhook Actual:** `7af551ec40b44520b623d866a787c2d9`
+- **Estado:** ✅ OPERATIVO (Leads llegando correctamente).
+- **Seguridad:** ✅ HMAC estricto en código. Falta verificar despliegue y configuración en ElevenLabs/Vercel.
+
+---
+
+## 🛠️ Plan de Implementación: Cierre de Seguridad (ElevenLabs First)
+
+Este plan detalla los pasos para pasar de "Modo Depuración" a "Producción Segura".
+
+### Fase A: Blindaje de ElevenLabs
+1. **[x] Re-activar Bloqueo Estricto (HMAC):**
+   - `src/app/api/webhooks/elevenlabs/route.ts` retorna `401 Unauthorized` si la firma es inválida o falta.
+   - La firma esperada usa el formato oficial de ElevenLabs: `t=timestamp,v0=hash`.
+   - El hash se valida contra `timestamp.body` y se rechazan timestamps fuera de tolerancia.
+2. **[ ] Activar Rate Limiting:**
+   - Preferir Redis/Upstash/Vercel KV para limitar a 20 peticiones/min.
+   - Evitar `Map` en memoria para producción serverless porque no es consistente entre instancias.
+   - Prevenir ataques de denegación de servicio (DoS) en el endpoint de leads.
+3. **[ ] Unificar URL y secretos de producción:**
+   - Usar `ELEVENLABS_WEBHOOK_URL` para evitar confusión entre `opps.one` y dominios de Vercel.
+   - Confirmar que el `ELEVENLABS_WEBHOOK_SECRET` de ElevenLabs coincide con el secreto de Vercel/Doppler en producción. ✅ Validado con prueba HMAC firmada.
+   - Ejecutar `powershell -ExecutionPolicy Bypass -File scripts/test_elevenlabs_hmac.ps1` como prueba controlada.
+
+### Fase B: Estabilización de WhatsApp Webhook
+4. **[ ] Re-activar Restricción CORS:**
+   - Cambiar `Access-Control-Allow-Origin` de `*` a `https://graph.facebook.com` en `supabase/functions/whatsapp-webhook/index.ts`.
+   - Nota: CORS no autentica webhooks server-to-server; para POST se debe añadir verificación de `X-Hub-Signature-256`.
+5. **[ ] Rotación de Verify Token:**
+   - Generar un token nuevo fuera del repositorio.
+   - Aplicarlo en la consola de Meta y en Doppler/Supabase secrets sin pegarlo en archivos versionados.
+
+### Fase C: Verificación Final
+6. **[ ] Prueba de Fuego (E2E):**
+   - Realizar una llamada real con Omar.
+   - Verificar en logs de Vercel que aparezca "ElevenLabs signature verified".
+   - Confirmar persistencia del lead en Supabase.
+
+---
+
+## 🛡️ Mejoras de Seguridad para Escalar (Pendientes)
+
+Identificadas en auditoría del 21/04/2026. Implementar tras estabilizar ElevenLabs:
 
 ### 🔴 Alta Prioridad
+1. **Limpiar Token de GitHub del remote:** ✅ COMPLETADO.
+2. **Proteger rutas del frontend en el Middleware:** Requiere migración a `@supabase/ssr` para validación de cookies de sesión.
 
-1. **Limpiar Token de GitHub de la URL del remote**
-   - **Problema:** El Personal Access Token (PAT) de GitHub está embebido directamente en la URL de `origin` (`git remote -v`), lo que lo expone a cualquier herramienta que lea la config de Git.
-   - **Solución:**
-     ```bash
-     git remote set-url origin https://github.com/iautomae/opps-one.git
-     ```
-   - Luego usar autenticación por SSH o dejar que Git pida credenciales.
-
-2. **Rotar `WHATSAPP_VERIFY_TOKEN`**
-   - **Problema:** El valor actual en Doppler es `secury_webhook_2026`, predecible y con historial en el código.
-   - **Solución:** Generar un token aleatorio (mín. 32 caracteres), actualizar en Doppler Y en la consola de Meta Developers simultáneamente.
-
-### 🟡 Media Prioridad
-
-3. **Proteger rutas del frontend en el Middleware**
-   - **Problema:** `middleware.ts` maneja subdominios pero no valida sesión en rutas privadas del frontend. Un usuario sin sesión podría acceder a URLs internas si las conoce.
-   - **Solución:** Agregar validación de cookie de sesión de Supabase en el middleware para redirigir al login si no hay sesión activa.
-
-4. **Restringir CORS en el webhook de WhatsApp**
-   - **Problema:** La función `whatsapp-webhook` tiene `Access-Control-Allow-Origin: *` (acepta cualquier origen).
-   - **Solución:** Limitar a los IPs/dominios oficiales de Meta (`graph.facebook.com`).
-
-5. **Rate Limiting en el webhook de ElevenLabs**
-   - **Problema:** No hay límite de peticiones en `/api/webhooks/elevenlabs`. Un atacante podría bombardearlo y llenar la BD, aunque la firma HMAC evita contenido falso.
-   - **Solución:** Activar Vercel Edge Rate Limiting o agregar un contador por IP con Redis/Upstash.
-
-### 🟢 Mejoras Recomendadas (Nice to Have)
-
-6. **Login con Google (OAuth)**
-   - Supabase ya lo soporta nativamente. Solo activar en `Authentication > Providers > Google` y agregar credenciales de Google Cloud Console.
-   - No requiere cambios en el código de autenticación actual.
-
-7. **Autenticación en 2 pasos (2FA/TOTP)**
-   - Supabase Auth soporta TOTP (Google Authenticator).
-   - Habilitarlo opcionalmente para roles `admin` y `tenant_owner`.
-
-8. **Auditoría de RLS (Row Level Security) en Supabase**
-   - Verificar que las tablas `agentes`, `leads`, `profiles` y `conversaciones` tienen políticas RLS activas y bien configuradas para que cada `tenant_id` solo vea sus propios datos.
-   - Usar el inspector de Supabase: `Database > Policies`.
+### 🟢 Mejoras Recomendadas
+3. **Login con Google (OAuth):** Configurar en Supabase Auth.
+4. **Auditoría de RLS:** Revisar políticas de seguridad por fila en tablas de `agentes` y `leads`.

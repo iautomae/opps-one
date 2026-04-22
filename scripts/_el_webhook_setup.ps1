@@ -7,14 +7,23 @@ param(
 )
 
 $AGENT_OMAR  = "agent_8001kmdjn3t0ezft8hqwq1k0bv78" # Omar — único agente activo
-$WEBHOOK_URL = "https://iautomae-platform.vercel.app/api/webhooks/elevenlabs"
+$WEBHOOK_URL = if ($env:ELEVENLABS_WEBHOOK_URL) { $env:ELEVENLABS_WEBHOOK_URL } else { "https://opps.one/api/webhooks/elevenlabs" }
 
 # Read from Doppler if not passed as params
+function Get-DopplerSecret($Name) {
+    $value = & doppler secrets get $Name --project escolta_doppler --config dev --plain 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Could not get $Name from Doppler: $value"
+        exit 1
+    }
+    return ($value | Out-String).Trim()
+}
+
 if (-not $ApiKey) {
-    $ApiKey = (doppler secrets get ELEVEN_LABS_API_KEY --project escolta_doppler --config dev --plain 2>&1).Trim()
+    $ApiKey = Get-DopplerSecret "ELEVEN_LABS_API_KEY"
 }
 if (-not $WebhookSecret) {
-    $WebhookSecret = (doppler secrets get ELEVENLABS_WEBHOOK_SECRET --project escolta_doppler --config dev --plain 2>&1).Trim()
+    $WebhookSecret = Get-DopplerSecret "ELEVENLABS_WEBHOOK_SECRET"
 }
 
 if (-not $ApiKey -or $ApiKey -like "*Error*") {
@@ -91,7 +100,7 @@ function Test-WebhookEndpoint {
 
 Write-Host "=== ElevenLabs Webhook Setup & QA ===`n"
 Write-Host "Target: $WEBHOOK_URL"
-Write-Host "Secret: $($WebhookSecret.Substring(0,[Math]::Min(8,$WebhookSecret.Length)))...[REDACTED]"
+Write-Host "Secret: [SET]"
 
 # List all agents
 Write-Host "`n--- Agents in Account ---"

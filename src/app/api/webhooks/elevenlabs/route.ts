@@ -5,7 +5,13 @@ import * as Sentry from '@sentry/nextjs';
 // crypto is available in Node.js environment
 import crypto from 'crypto';
 
+const ELEVENLABS_SIGNATURE_TOLERANCE_SECONDS = 30 * 60;
+
 function timingSafeEqualHex(expectedHex: string, receivedHex: string) {
+    if (!/^[a-f0-9]+$/i.test(expectedHex) || !/^[a-f0-9]+$/i.test(receivedHex)) {
+        return false;
+    }
+
     const expected = Buffer.from(expectedHex, 'hex');
     const received = Buffer.from(receivedHex, 'hex');
 
@@ -16,36 +22,41 @@ function timingSafeEqualHex(expectedHex: string, receivedHex: string) {
     return crypto.timingSafeEqual(expected, received);
 }
 
-function verifyElevenLabsSignature(bodyText: string, signature: string, secret: string) {
-    const directDigest = crypto.createHmac('sha256', secret).update(bodyText).digest('hex');
-    if (timingSafeEqualHex(directDigest, signature)) {
-        return true;
-    }
+type SignatureVerificationResult =
+    | { ok: true }
+    | { ok: false; reason: string };
 
+function verifyElevenLabsSignature(bodyText: string, signature: string, secret: string): SignatureVerificationResult {
     const parts = signature.split(',').reduce((acc: Record<string, string>, part: string) => {
         const [k, v] = part.split('=', 2);
         if (k && v) acc[k.trim()] = v.trim();
         return acc;
     }, {} as Record<string, string>);
 
-    if (!parts.t || !(parts.v0 || parts.v1)) {
-        return false;
+    if (!parts.t || !parts.v0) {
+        return { ok: false, reason: 'Missing timestamp or v0 signature' };
+    }
+
+    const timestamp = Number(parts.t);
+    if (!Number.isFinite(timestamp)) {
+        return { ok: false, reason: 'Invalid timestamp' };
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (Math.abs(now - timestamp) > ELEVENLABS_SIGNATURE_TOLERANCE_SECONDS) {
+        return { ok: false, reason: 'Timestamp outside tolerance' };
     }
 
     const signedPayload = `${parts.t}.${bodyText}`;
     const expectedDigest = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-    return timingSafeEqualHex(expectedDigest, parts.v0 || parts.v1);
+    if (!timingSafeEqualHex(expectedDigest, parts.v0)) {
+        return { ok: false, reason: 'Signature mismatch' };
+    }
+
+    return { ok: true };
 }
 
 export async function POST(request: Request) {
-    // Determine which key to use
-    // Using service role key allows bypassing RLS policies
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    // Create a new client instance for this request
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Define strict type for AgentData to avoid 'any'
     type AgentData = {
         id: string;
@@ -86,21 +97,36 @@ export async function POST(request: Request) {
     try {
         const bodyText = await request.text();
 
-        // --- HMAC SIGNATURE VALIDATION (Security: Warning only during debug) ---
+        // --- HMAC SIGNATURE VALIDATION ---
         const webhookSecret = process.env.ELEVENLABS_WEBHOOK_SECRET;
         const signature = request.headers.get('elevenlabs-signature') || '';
         
         if (!webhookSecret) {
-            console.warn('⚠️ ELEVENLABS_WEBHOOK_SECRET is missing. Proceeding without validation.');
-        } else if (!verifyElevenLabsSignature(bodyText, signature, webhookSecret)) {
-            console.warn('❌ Invalid ElevenLabs signature. Proceeding anyway for debugging.');
-        } else {
-            console.log('✅ ElevenLabs signature verified.');
+            console.error('ELEVENLABS_WEBHOOK_SECRET is missing. Rejecting webhook.');
+            return NextResponse.json({ error: 'Webhook secret is not configured' }, { status: 500 });
         }
+
+        if (!signature) {
+            console.warn('Missing ElevenLabs signature header.');
+            return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+        }
+
+        const signatureVerification = verifyElevenLabsSignature(bodyText, signature, webhookSecret);
+        if (!signatureVerification.ok) {
+            console.warn(`Invalid ElevenLabs signature: ${signatureVerification.reason}`);
+            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
+
+        console.log('ElevenLabs signature verified.');
         // -------------------------------------------------------------------
 
         const payload = JSON.parse(bodyText);
         const allowDebugFallback = process.env.ELEVENLABS_DEBUG_FALLBACK === 'true';
+
+        // Determine which key to use. Service role allows bypassing RLS policies.
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         console.log('Received ElevenLabs Webhook Type:', payload.type);
 

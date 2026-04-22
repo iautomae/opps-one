@@ -5,7 +5,7 @@
 
 const apiKey = process.env.ELEVEN_LABS_API_KEY;
 const AGENT_ID = 'agent_8001kmdjn3t0ezft8hqwq1k0bv78'; // Omar — único agente activo
-const WEBHOOK_URL = 'https://iautomae-platform.vercel.app/api/webhooks/elevenlabs';
+const WEBHOOK_URL = process.env.ELEVENLABS_WEBHOOK_URL || 'https://opps.one/api/webhooks/elevenlabs';
 const WEBHOOK_SECRET = process.env.ELEVENLABS_WEBHOOK_SECRET;
 
 if (!apiKey) { console.error('❌ ELEVEN_LABS_API_KEY missing'); process.exit(1); }
@@ -106,7 +106,7 @@ async function listAgents() {
 async function main() {
     console.log('=== ElevenLabs Webhook Setup & QA ===\n');
     console.log(`Target URL: ${WEBHOOK_URL}`);
-    console.log(`Secret: ${WEBHOOK_SECRET.substring(0, 8)}...[REDACTED]`);
+    console.log('Secret: [SET]');
 
     await listAgents();
 
