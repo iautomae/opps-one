@@ -208,10 +208,12 @@ export async function getOrCreateSecuritySettings(profileId: string, email?: str
     return created;
 }
 
+export type OtpPurpose = 'setup_email' | 'login' | 'change_2fa_current_email' | 'change_2fa_new_email';
+
 export async function createOtpChallenge(params: {
     profileId: string;
     email: string;
-    purpose: 'setup_email' | 'login';
+    purpose: OtpPurpose;
     context?: Record<string, unknown>;
 }) {
     await ensureSecurityTables();
@@ -243,7 +245,7 @@ export async function createOtpChallenge(params: {
     };
 }
 
-export async function getActiveOtpChallenge(profileId: string, purpose: 'setup_email' | 'login') {
+export async function getActiveOtpChallenge(profileId: string, purpose: OtpPurpose) {
     await ensureSecurityTables();
 
     const { data, error } = await supabaseAdmin
@@ -268,7 +270,7 @@ export async function verifyOtpChallenge(params: {
     profileId: string;
     challengeId: string;
     code: string;
-    purpose: 'setup_email' | 'login';
+    purpose: OtpPurpose;
 }) {
     await ensureSecurityTables();
 

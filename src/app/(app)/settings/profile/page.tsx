@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { Shield, Mail, Bell, LockKeyhole, LoaderCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Shield, Mail, Bell, LockKeyhole, LoaderCircle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -15,6 +15,8 @@ type SecuritySettingsState = {
     maskedTwoFactorEmail: string;
 };
 
+type ChangeStep = 'idle' | 'current_sent' | 'current_verified' | 'new_sent';
+
 const DEFAULT_SETTINGS: SecuritySettingsState = {
     twoFactorEmail: '',
     twoFactorEnabled: false,
@@ -25,16 +27,29 @@ const DEFAULT_SETTINGS: SecuritySettingsState = {
     maskedTwoFactorEmail: '',
 };
 
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
+
 export default function ProfileSecurityPage() {
     const { profile } = useProfile();
     const [settings, setSettings] = useState<SecuritySettingsState>(DEFAULT_SETTINGS);
-    const [pendingEmail, setPendingEmail] = useState('');
-    const [verificationCode, setVerificationCode] = useState('');
-    const [challengeId, setChallengeId] = useState('');
+    const [newTwoFactorEmail, setNewTwoFactorEmail] = useState('');
+    const [currentCode, setCurrentCode] = useState('');
+    const [newEmailCode, setNewEmailCode] = useState('');
+    const [currentChallengeId, setCurrentChallengeId] = useState('');
+    const [newEmailChallengeId, setNewEmailChallengeId] = useState('');
+    const [changeStep, setChangeStep] = useState<ChangeStep>('idle');
+    const [maskedCurrentEmail, setMaskedCurrentEmail] = useState('');
+    const [maskedNewEmail, setMaskedNewEmail] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+
+    const currentSecurityEmail = useMemo(() => {
+        return settings.twoFactorEmail || settings.maskedTwoFactorEmail || settings.alertEmail || profile?.email || '';
+    }, [settings.alertEmail, settings.maskedTwoFactorEmail, settings.twoFactorEmail, profile?.email]);
 
     useEffect(() => {
         async function loadSettings() {
@@ -52,8 +67,8 @@ export default function ProfileSecurityPage() {
                 }
 
                 setSettings(json.settings || DEFAULT_SETTINGS);
-            } catch (err: any) {
-                setError(err.message || 'No se pudo cargar la seguridad.');
+            } catch (err: unknown) {
+                setError(getErrorMessage(err, 'No se pudo cargar la seguridad.'));
             } finally {
                 setLoading(false);
             }
@@ -62,15 +77,29 @@ export default function ProfileSecurityPage() {
         loadSettings();
     }, []);
 
+    function resetEmailChangeFlow() {
+        setCurrentCode('');
+        setNewEmailCode('');
+        setCurrentChallengeId('');
+        setNewEmailChallengeId('');
+        setChangeStep('idle');
+        setMaskedCurrentEmail('');
+        setMaskedNewEmail('');
+    }
+
+    async function getAccessToken() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Tu sesion expiro.');
+        return session.access_token;
+    }
+
     async function saveBaseSettings(next: Partial<SecuritySettingsState>) {
         setSaving(true);
         setError('');
         setMessage('');
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) throw new Error('Tu sesión expiró.');
-
+            const accessToken = await getAccessToken();
             const payload = {
                 notifyOnSuspicious: next.notifyOnSuspicious ?? settings.notifyOnSuspicious,
                 alertEmail: next.alertEmail ?? settings.alertEmail,
@@ -81,84 +110,167 @@ export default function ProfileSecurityPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`,
+                    Authorization: `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify(payload),
             });
 
             const json = await res.json().catch(() => ({}));
             if (!res.ok) {
-                throw new Error(json.error || 'No se pudo guardar la configuración.');
+                throw new Error(json.error || 'No se pudo guardar la configuracion.');
             }
 
             setSettings((prev) => ({ ...prev, ...next }));
-            setMessage('Configuración guardada.');
-        } catch (err: any) {
-            setError(err.message || 'No se pudo guardar la configuración.');
+            setMessage('Configuracion guardada.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo guardar la configuracion.'));
         } finally {
             setSaving(false);
         }
     }
 
-    async function sendVerificationCode() {
+    async function sendCurrentEmailCode() {
         setSaving(true);
         setError('');
         setMessage('');
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) throw new Error('Tu sesión expiró.');
-            if (!pendingEmail.includes('@')) throw new Error('Ingresa un correo válido.');
+            if (!newTwoFactorEmail.includes('@')) throw new Error('Ingresa el nuevo correo de doble acceso.');
 
+            const accessToken = await getAccessToken();
             const res = await fetch('/api/security/settings/send-code', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ email: pendingEmail }),
-            });
-
-            const json = await res.json();
-            if (!res.ok) {
-                throw new Error(json.error || 'No se pudo enviar el código.');
-            }
-
-            setChallengeId(json.challengeId);
-            setMessage(`Te enviamos un código a ${pendingEmail}.`);
-        } catch (err: any) {
-            setError(err.message || 'No se pudo enviar el código.');
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    async function verifySecurityEmail() {
-        setSaving(true);
-        setError('');
-        setMessage('');
-
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) throw new Error('Tu sesión expiró.');
-            if (!challengeId) throw new Error('Primero solicita el código.');
-            if (verificationCode.length !== 6) throw new Error('Ingresa el código completo.');
-
-            const res = await fetch('/api/security/settings/verify-code', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`,
+                    Authorization: `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({
-                    challengeId,
-                    code: verificationCode,
+                    step: 'current',
+                    email: newTwoFactorEmail,
                 }),
             });
 
             const json = await res.json();
             if (!res.ok) {
-                throw new Error(json.error || 'No se pudo verificar el correo.');
+                throw new Error(json.error || 'No se pudo enviar el codigo.');
+            }
+
+            setCurrentChallengeId(json.challengeId);
+            setMaskedCurrentEmail(json.maskedEmail || currentSecurityEmail);
+            setChangeStep('current_sent');
+            setMessage(`Te enviamos un codigo a ${json.maskedEmail || 'tu correo actual'}.`);
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo enviar el codigo.'));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function verifyCurrentEmailCode() {
+        setSaving(true);
+        setError('');
+        setMessage('');
+
+        try {
+            if (!currentChallengeId) throw new Error('Primero solicita el codigo al correo actual.');
+            if (currentCode.length !== 6) throw new Error('Ingresa el codigo completo.');
+
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/verify-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    step: 'current',
+                    challengeId: currentChallengeId,
+                    code: currentCode,
+                }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error || 'No se pudo validar el correo actual.');
+            }
+
+            setChangeStep('current_verified');
+            setMessage('Correo actual validado. Ahora confirma el nuevo correo.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo validar el codigo.'));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function sendNewEmailCode() {
+        setSaving(true);
+        setError('');
+        setMessage('');
+
+        try {
+            if (!newTwoFactorEmail.includes('@')) throw new Error('Ingresa el nuevo correo de doble acceso.');
+            if (!currentChallengeId || changeStep !== 'current_verified') {
+                throw new Error('Primero valida el correo actual o de respaldo.');
+            }
+
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/send-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    step: 'new',
+                    email: newTwoFactorEmail,
+                    currentChallengeId,
+                }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error || 'No se pudo enviar el codigo al nuevo correo.');
+            }
+
+            setNewEmailChallengeId(json.challengeId);
+            setMaskedNewEmail(json.maskedEmail || newTwoFactorEmail);
+            setChangeStep('new_sent');
+            setMessage(`Te enviamos un codigo a ${json.maskedEmail || newTwoFactorEmail}.`);
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo enviar el codigo al nuevo correo.'));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function verifyNewEmailCode() {
+        setSaving(true);
+        setError('');
+        setMessage('');
+
+        try {
+            if (!newEmailChallengeId) throw new Error('Primero solicita el codigo al nuevo correo.');
+            if (newEmailCode.length !== 6) throw new Error('Ingresa el codigo completo.');
+
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/verify-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    step: 'new',
+                    challengeId: newEmailChallengeId,
+                    currentChallengeId,
+                    code: newEmailCode,
+                }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error || 'No se pudo verificar el nuevo correo.');
             }
 
             setSettings((prev) => ({
@@ -169,12 +281,11 @@ export default function ProfileSecurityPage() {
                 lastVerifiedAt: new Date().toISOString(),
                 alertEmail: json.twoFactorEmail,
             }));
-            setPendingEmail('');
-            setVerificationCode('');
-            setChallengeId('');
-            setMessage('Correo de seguridad verificado. La doble verificación quedó activa.');
-        } catch (err: any) {
-            setError(err.message || 'No se pudo verificar el correo.');
+            setNewTwoFactorEmail('');
+            resetEmailChangeFlow();
+            setMessage('Correo de doble acceso actualizado.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo verificar el nuevo correo.'));
         } finally {
             setSaving(false);
         }
@@ -197,7 +308,7 @@ export default function ProfileSecurityPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-primary">Perfil</p>
                 <h1 className="text-3xl font-black text-gray-900 tracking-tight mt-2">Seguridad de acceso</h1>
                 <p className="text-sm text-gray-500 mt-2 max-w-2xl">
-                    Tu panel es privado. El acceso se valida desde Perú y puedes activar una segunda verificación por correo antes de entrar.
+                    Tu panel es privado. El acceso se valida desde Peru y puede requerir un codigo adicional al correo de seguridad.
                 </p>
             </div>
 
@@ -214,15 +325,15 @@ export default function ProfileSecurityPage() {
                             <Shield size={20} />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-gray-900">País permitido</h2>
+                            <h2 className="text-lg font-bold text-gray-900">Pais permitido</h2>
                             <p className="text-sm text-gray-500 mt-1">
-                                En esta versión el ingreso queda limitado a <strong>Perú</strong>.
+                                En esta version el ingreso queda limitado a <strong>Peru</strong>.
                             </p>
                         </div>
                     </div>
                     <div className="rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3">
-                        <p className="text-xs uppercase tracking-[0.2em] text-gray-400 font-bold">Política actual</p>
-                        <p className="mt-2 text-sm font-semibold text-gray-800">Solo Perú ({settings.allowedCountries.join(', ')})</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-gray-400 font-bold">Politica actual</p>
+                        <p className="mt-2 text-sm font-semibold text-gray-800">Solo Peru ({settings.allowedCountries.join(', ')})</p>
                     </div>
                 </section>
 
@@ -234,47 +345,9 @@ export default function ProfileSecurityPage() {
                         <div>
                             <h2 className="text-lg font-bold text-gray-900">Correo de doble acceso</h2>
                             <p className="text-sm text-gray-500 mt-1">
-                                Cada trabajador puede elegir su correo para recibir el código de verificación al iniciar sesión.
+                                Cambiar este correo requiere validar primero el correo actual o de respaldo.
                             </p>
                         </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="text-xs uppercase tracking-[0.2em] text-gray-400 font-bold">Correo de seguridad</label>
-                        <input
-                            type="email"
-                            value={pendingEmail}
-                            onChange={(e) => setPendingEmail(e.target.value)}
-                            placeholder={settings.twoFactorEmail || profile?.email || 'nombre@correo.com'}
-                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                        />
-                        <button
-                            onClick={sendVerificationCode}
-                            disabled={saving || !pendingEmail}
-                            className="w-full rounded-2xl bg-brand-primary text-white font-bold px-4 py-3 disabled:opacity-50"
-                        >
-                            {saving ? 'Enviando...' : 'Enviar código al correo'}
-                        </button>
-                    </div>
-
-                    <div className="space-y-3 border-t border-gray-100 pt-4">
-                        <label className="text-xs uppercase tracking-[0.2em] text-gray-400 font-bold">Código recibido</label>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={6}
-                            value={verificationCode}
-                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="000000"
-                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 tracking-[0.35em] text-center outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                        />
-                        <button
-                            onClick={verifySecurityEmail}
-                            disabled={saving || !challengeId || verificationCode.length !== 6}
-                            className="w-full rounded-2xl border border-gray-300 text-gray-900 font-bold px-4 py-3 disabled:opacity-50"
-                        >
-                            {saving ? 'Verificando...' : 'Verificar y activar'}
-                        </button>
                     </div>
 
                     <div className="rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3">
@@ -282,8 +355,90 @@ export default function ProfileSecurityPage() {
                         <p className="mt-2 text-sm text-gray-700">
                             {settings.twoFactorEnabled
                                 ? `Activo en ${settings.twoFactorEmail || settings.maskedTwoFactorEmail || 'correo verificado'}`
-                                : 'Aún no activado'}
+                                : `Aun no activado. Respaldo inicial: ${profile?.email || 'correo del perfil'}`}
                         </p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="text-xs uppercase tracking-[0.2em] text-gray-400 font-bold">Nuevo correo 2FA</label>
+                        <input
+                            type="email"
+                            value={newTwoFactorEmail}
+                            onChange={(e) => {
+                                setNewTwoFactorEmail(e.target.value);
+                                if (changeStep !== 'idle') resetEmailChangeFlow();
+                            }}
+                            placeholder="nombre@correo.com"
+                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                        />
+                        <button
+                            type="button"
+                            onClick={sendCurrentEmailCode}
+                            disabled={saving || !newTwoFactorEmail || changeStep !== 'idle'}
+                            className="w-full rounded-2xl bg-brand-primary text-white font-bold px-4 py-3 disabled:opacity-50"
+                        >
+                            {saving && changeStep === 'idle' ? 'Enviando...' : 'Enviar codigo al correo actual'}
+                        </button>
+                    </div>
+
+                    <div className="space-y-3 border-t border-gray-100 pt-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <label className="text-xs uppercase tracking-[0.2em] text-gray-400 font-bold">Codigo del correo actual</label>
+                            {changeStep === 'current_verified' || changeStep === 'new_sent' ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
+                                    <CheckCircle2 size={14} />
+                                    Validado
+                                </span>
+                            ) : null}
+                        </div>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={currentCode}
+                            onChange={(e) => setCurrentCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="000000"
+                            disabled={!currentChallengeId || changeStep === 'current_verified' || changeStep === 'new_sent'}
+                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 tracking-[0.35em] text-center outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary disabled:bg-gray-50"
+                        />
+                        <button
+                            type="button"
+                            onClick={verifyCurrentEmailCode}
+                            disabled={saving || !currentChallengeId || currentCode.length !== 6 || changeStep === 'current_verified' || changeStep === 'new_sent'}
+                            className="w-full rounded-2xl border border-gray-300 text-gray-900 font-bold px-4 py-3 disabled:opacity-50"
+                        >
+                            {saving && changeStep === 'current_sent' ? 'Validando...' : `Validar ${maskedCurrentEmail || 'correo actual'}`}
+                        </button>
+                    </div>
+
+                    <div className="space-y-3 border-t border-gray-100 pt-4">
+                        <label className="text-xs uppercase tracking-[0.2em] text-gray-400 font-bold">Codigo del nuevo correo</label>
+                        <button
+                            type="button"
+                            onClick={sendNewEmailCode}
+                            disabled={saving || changeStep !== 'current_verified'}
+                            className="w-full rounded-2xl bg-gray-900 text-white font-bold px-4 py-3 disabled:opacity-50"
+                        >
+                            {saving && changeStep === 'current_verified' ? 'Enviando...' : 'Enviar codigo al nuevo correo'}
+                        </button>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={newEmailCode}
+                            onChange={(e) => setNewEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="000000"
+                            disabled={!newEmailChallengeId}
+                            className="w-full rounded-2xl border border-gray-200 px-4 py-3 tracking-[0.35em] text-center outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary disabled:bg-gray-50"
+                        />
+                        <button
+                            type="button"
+                            onClick={verifyNewEmailCode}
+                            disabled={saving || !newEmailChallengeId || newEmailCode.length !== 6}
+                            className="w-full rounded-2xl border border-gray-300 text-gray-900 font-bold px-4 py-3 disabled:opacity-50"
+                        >
+                            {saving && changeStep === 'new_sent' ? 'Verificando...' : `Confirmar ${maskedNewEmail || 'nuevo correo'}`}
+                        </button>
                     </div>
                 </section>
             </div>
@@ -296,7 +451,7 @@ export default function ProfileSecurityPage() {
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">Alertas de acceso sospechoso</h2>
                         <p className="text-sm text-gray-500 mt-1">
-                            Si se detecta un intento desde un país no permitido, enviaremos una notificación al correo configurado.
+                            Si se detecta un intento desde un pais no permitido, enviaremos una notificacion al correo configurado.
                         </p>
                     </div>
                 </div>
@@ -323,6 +478,7 @@ export default function ProfileSecurityPage() {
 
                 <div className="flex flex-wrap gap-3">
                     <button
+                        type="button"
                         onClick={() => saveBaseSettings({
                             alertEmail: settings.alertEmail,
                             notifyOnSuspicious: settings.notifyOnSuspicious,
@@ -333,12 +489,13 @@ export default function ProfileSecurityPage() {
                         {saving ? 'Guardando...' : 'Guardar alertas'}
                     </button>
                     <button
+                        type="button"
                         onClick={() => saveBaseSettings({ twoFactorEnabled: !settings.twoFactorEnabled })}
                         disabled={saving || !settings.twoFactorEmail}
                         className="rounded-2xl border border-gray-300 text-gray-900 font-bold px-5 py-3 disabled:opacity-50 flex items-center gap-2"
                     >
                         <LockKeyhole size={16} />
-                        {settings.twoFactorEnabled ? 'Desactivar doble verificación' : 'Activar doble verificación'}
+                        {settings.twoFactorEnabled ? 'Desactivar doble verificacion' : 'Activar doble verificacion'}
                     </button>
                 </div>
             </section>
