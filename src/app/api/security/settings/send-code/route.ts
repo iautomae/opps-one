@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const step = ['new', 'current', 'disable'].includes(body.step) ? body.step : 'current';
+    const step = ['new', 'current', 'disable', 'alerts'].includes(body.step) ? body.step : 'current';
     const currentChallengeId = typeof body.currentChallengeId === 'string' ? body.currentChallengeId.trim() : '';
 
     const profileLookup = await getProfileById(context.profile.id);
@@ -77,6 +77,41 @@ export async function POST(request: Request) {
             challengeId: challenge.challengeId,
             expiresAt: challenge.expiresAt,
             maskedEmail: maskEmail(email),
+        });
+    }
+
+    if (step === 'alerts') {
+        const currentEmail = settings.two_factor_email || profileEmail;
+        if (!settings.two_factor_enabled || !settings.two_factor_email) {
+            return NextResponse.json({ error: 'Configura el 2FA primero para modificar las alertas de intrusión de forma segura.' }, { status: 400 });
+        }
+
+        const challenge = await createOtpChallenge({
+            profileId: context.profile.id,
+            email: settings.two_factor_email,
+            purpose: 'alerts',
+        });
+
+        await sendSecurityCodeEmail({
+            to: settings.two_factor_email,
+            code: challenge.code,
+            purposeLabel: 'autorizar la modificación de tus alertas de intrusión',
+        });
+
+        await logSecurityEvent({
+            profileId: context.profile.id,
+            email: context.profile.email,
+            eventType: '2FA_ALERTS_CHALLENGE_SENT',
+            request,
+            metadata: { challengeId: challenge.challengeId, targetEmail: settings.two_factor_email },
+        });
+
+        return NextResponse.json({
+            success: true,
+            step: 'alerts',
+            challengeId: challenge.challengeId,
+            expiresAt: challenge.expiresAt,
+            maskedEmail: maskEmail(settings.two_factor_email),
         });
     }
 

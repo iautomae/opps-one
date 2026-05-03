@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const challengeId = typeof body.challengeId === 'string' ? body.challengeId.trim() : '';
     const code = typeof body.code === 'string' ? body.code.trim() : '';
-    const step = ['new', 'current', 'disable'].includes(body.step) ? body.step : 'current';
+    const step = ['new', 'current', 'disable', 'alerts'].includes(body.step) ? body.step : 'current';
     const currentChallengeId = typeof body.currentChallengeId === 'string' ? body.currentChallengeId.trim() : '';
 
     if (!challengeId || !code) {
@@ -88,6 +88,50 @@ export async function POST(request: Request) {
             success: true,
             step: 'disable',
             twoFactorEnabled: false,
+        });
+    }
+
+    if (step === 'alerts') {
+        const verification = await verifyOtpChallenge({
+            profileId: context.profile.id,
+            challengeId,
+            code,
+            purpose: 'alerts',
+        });
+
+        if (!verification.ok) {
+            return NextResponse.json(
+                { error: 'Código inválido o expirado.', reason: verification.reason },
+                { status: 400 }
+            );
+        }
+
+        const notifyOnSuspicious = typeof body.notifyOnSuspicious === 'boolean' ? body.notifyOnSuspicious : true;
+        const alertEmail = ['primary', '2fa', 'both'].includes(body.alertDestination) ? body.alertDestination : 'primary';
+
+        const { error } = await supabaseAdmin
+            .from('profile_security_settings')
+            .upsert({
+                profile_id: context.profile.id,
+                notify_on_suspicious: notifyOnSuspicious,
+                alert_email: alertEmail,
+            });
+
+        if (error) {
+            return NextResponse.json({ error: 'No se pudieron actualizar las alertas.' }, { status: 500 });
+        }
+
+        await logSecurityEvent({
+            profileId: context.profile.id,
+            email: context.profile.email,
+            eventType: '2FA_ALERTS_UPDATED',
+            request,
+            metadata: { challengeId, notifyOnSuspicious, alertEmail },
+        });
+
+        return NextResponse.json({
+            success: true,
+            step: 'alerts',
         });
     }
 

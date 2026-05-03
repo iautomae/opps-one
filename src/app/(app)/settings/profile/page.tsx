@@ -10,7 +10,7 @@ type SecuritySettingsState = {
     twoFactorEnabled: boolean;
     allowedCountries: string[];
     notifyOnSuspicious: boolean;
-    alertEmail: string;
+    alertEmail: string; // 'primary', '2fa', 'both'
     lastVerifiedAt: string | null;
     maskedTwoFactorEmail: string;
 };
@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS: SecuritySettingsState = {
     twoFactorEnabled: false,
     allowedCountries: ['PE'],
     notifyOnSuspicious: true,
-    alertEmail: '',
+    alertEmail: 'primary',
     lastVerifiedAt: null,
     maskedTwoFactorEmail: '',
 };
@@ -42,6 +42,7 @@ export default function ProfileSecurityPage() {
     // Modal Visibility States
     const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
     const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
+    const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
 
     // Form States
     const [newTwoFactorEmail, setNewTwoFactorEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_newEmail') || '' : '');
@@ -57,6 +58,11 @@ export default function ProfileSecurityPage() {
     const [disableCode, setDisableCode] = useState('');
     const [disableChallengeId, setDisableChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_disableChallenge') || '' : '');
 
+    const [alertsStep, setAlertsStep] = useState<'idle' | 'sent'>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_alertsStep') as 'idle' | 'sent') || 'idle' : 'idle');
+    const [alertsCode, setAlertsCode] = useState('');
+    const [alertsChallengeId, setAlertsChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_alertsChallenge') || '' : '');
+    const [tempAlertSettings, setTempAlertSettings] = useState<{notifyOnSuspicious: boolean, alertEmail: string} | null>(null);
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             sessionStorage.setItem('2fa_newEmail', newTwoFactorEmail);
@@ -67,14 +73,16 @@ export default function ProfileSecurityPage() {
             sessionStorage.setItem('2fa_maskedNew', maskedNewEmail);
             sessionStorage.setItem('2fa_disableStep', disableStep);
             sessionStorage.setItem('2fa_disableChallenge', disableChallengeId);
+            sessionStorage.setItem('2fa_alertsStep', alertsStep);
+            sessionStorage.setItem('2fa_alertsChallenge', alertsChallengeId);
         }
-    }, [newTwoFactorEmail, currentChallengeId, newEmailChallengeId, changeStep, maskedCurrentEmail, maskedNewEmail, disableStep, disableChallengeId]);
+    }, [newTwoFactorEmail, currentChallengeId, newEmailChallengeId, changeStep, maskedCurrentEmail, maskedNewEmail, disableStep, disableChallengeId, alertsStep, alertsChallengeId]);
 
-    // Re-open modals on mount if there's active state
     useEffect(() => {
         if (changeStep !== 'idle') setIsChangeModalOpen(true);
         if (disableStep !== 'idle') setIsDisableModalOpen(true);
-    }, [changeStep, disableStep]);
+        if (alertsStep !== 'idle') setIsAlertsModalOpen(true);
+    }, [changeStep, disableStep, alertsStep]);
 
     useEffect(() => {
         async function loadSettings() {
@@ -127,12 +135,24 @@ export default function ProfileSecurityPage() {
         }
     }
 
+    function resetAlertsFlow() {
+        setAlertsCode('');
+        setAlertsChallengeId('');
+        setAlertsStep('idle');
+        setTempAlertSettings(null);
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('2fa_alertsStep');
+            sessionStorage.removeItem('2fa_alertsChallenge');
+        }
+    }
+
     async function getAccessToken() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new Error('Tu sesion expiro.');
         return session.access_token;
     }
 
+    // Usado directamente cuando no hay 2FA, o en endpoints que no requieren confirmación adicional.
     async function saveBaseSettings(next: Partial<SecuritySettingsState>) {
         setSaving(true);
         setError('');
@@ -142,7 +162,7 @@ export default function ProfileSecurityPage() {
             const accessToken = await getAccessToken();
             const payload = {
                 notifyOnSuspicious: next.notifyOnSuspicious ?? settings.notifyOnSuspicious,
-                // We purposefully do not update alertEmail anymore from UI to simplify and secure
+                alertEmail: next.alertEmail ?? settings.alertEmail,
             };
 
             const res = await fetch('/api/security/settings', {
@@ -155,9 +175,74 @@ export default function ProfileSecurityPage() {
             if (!res.ok) throw new Error(json.error || 'No se pudo guardar la configuracion.');
 
             setSettings((prev) => ({ ...prev, ...next }));
-            setMessage('Configuracion de alertas actualizada.');
+            setMessage('Configuracion guardada correctamente.');
         } catch (err: unknown) {
             setError(getErrorMessage(err, 'No se pudo guardar la configuracion.'));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    function handleAlertChange(nextSettings: {notifyOnSuspicious: boolean, alertEmail: string}) {
+        if (!settings.twoFactorEnabled) {
+            saveBaseSettings(nextSettings);
+            return;
+        }
+        setTempAlertSettings(nextSettings);
+        setIsAlertsModalOpen(true);
+    }
+
+    async function sendAlertsCode() {
+        setSaving(true); setError(''); setMessage('');
+        try {
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/send-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                body: JSON.stringify({ step: 'alerts' }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'No se pudo solicitar el código para alertas.');
+
+            setAlertsChallengeId(json.challengeId);
+            setAlertsStep('sent');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo solicitar el código.'));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function verifyAlertsCode() {
+        if (!tempAlertSettings) return;
+        setSaving(true); setError(''); setMessage('');
+        try {
+            if (alertsCode.length !== 6) throw new Error('Ingresa el código completo.');
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/verify-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                body: JSON.stringify({ 
+                    step: 'alerts', 
+                    challengeId: alertsChallengeId, 
+                    code: alertsCode,
+                    notifyOnSuspicious: tempAlertSettings.notifyOnSuspicious,
+                    alertDestination: tempAlertSettings.alertEmail
+                }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'No se pudo verificar el código de configuración.');
+
+            setSettings((prev) => ({ 
+                ...prev, 
+                notifyOnSuspicious: tempAlertSettings.notifyOnSuspicious,
+                alertEmail: tempAlertSettings.alertEmail
+            }));
+            resetAlertsFlow();
+            setIsAlertsModalOpen(false);
+            setMessage('Configuración de alertas actualizada exitosamente.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo actualizar la configuración.'));
         } finally {
             setSaving(false);
         }
@@ -197,7 +282,7 @@ export default function ProfileSecurityPage() {
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || 'No se pudo verificar el código de desactivación.');
 
-            setSettings((prev) => ({ ...prev, twoFactorEnabled: false }));
+            setSettings((prev) => ({ ...prev, twoFactorEnabled: false, alertEmail: 'primary' }));
             resetDisableFlow();
             setIsDisableModalOpen(false);
             setMessage('Doble verificación desactivada exitosamente.');
@@ -320,6 +405,9 @@ export default function ProfileSecurityPage() {
         );
     }
 
+    // Determine current alert email value
+    const currentAlertValue = ['primary', '2fa', 'both'].includes(settings.alertEmail) ? settings.alertEmail : 'primary';
+
     return (
         <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -358,26 +446,43 @@ export default function ProfileSecurityPage() {
                 </div>
 
                 {/* Card 2: Alertas de Seguridad */}
-                <div className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
+                <div className={`bg-white rounded-[2rem] p-6 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col transition-opacity ${!settings.twoFactorEnabled ? 'opacity-70 grayscale-[0.2]' : ''}`}>
                     <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-5">
                         <Bell size={24} />
                     </div>
                     <h2 className="text-lg font-bold text-gray-900">Alertas de Intrusión</h2>
                     <p className="text-sm text-gray-500 mt-2 flex-grow leading-relaxed">
-                        Recibirás notificaciones inmediatas a tu correo si detectamos intentos de inicio de sesión sospechosos.
+                        {!settings.twoFactorEnabled 
+                            ? "Activa el 2FA primero para poder administrar las alertas de seguridad de forma protegida."
+                            : "Recibirás notificaciones inmediatas si detectamos intentos de inicio de sesión sospechosos."}
                     </p>
-                    <div className="mt-5 flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                        <span className="text-sm font-bold text-gray-700">Notificar siempre</span>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                                type="checkbox" 
-                                className="sr-only peer"
-                                checked={settings.notifyOnSuspicious}
-                                onChange={(e) => saveBaseSettings({ notifyOnSuspicious: e.target.checked })}
-                                disabled={saving}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
-                        </label>
+                    <div className="mt-5 space-y-3">
+                        <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                            <span className="text-sm font-bold text-gray-700">Notificar alertas</span>
+                            <label className={`relative inline-flex items-center ${!settings.twoFactorEnabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only peer"
+                                    checked={settings.notifyOnSuspicious}
+                                    onChange={(e) => handleAlertChange({ notifyOnSuspicious: e.target.checked, alertEmail: currentAlertValue })}
+                                    disabled={saving || !settings.twoFactorEnabled}
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                            </label>
+                        </div>
+                        
+                        {settings.notifyOnSuspicious && (
+                            <select
+                                value={currentAlertValue}
+                                onChange={(e) => handleAlertChange({ notifyOnSuspicious: settings.notifyOnSuspicious, alertEmail: e.target.value })}
+                                disabled={saving || !settings.twoFactorEnabled}
+                                className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-brand-primary focus:border-brand-primary block px-3 py-2.5 outline-none cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50"
+                            >
+                                <option value="primary">Enviar al Correo Principal</option>
+                                <option value="2fa">Enviar al Correo 2FA</option>
+                                <option value="both">Enviar a Ambos Correos</option>
+                            </select>
+                        )}
                     </div>
                 </div>
 
@@ -515,6 +620,59 @@ export default function ProfileSecurityPage() {
                                             {saving ? 'Confirmando...' : 'Confirmar y Activar 2FA'}
                                         </button>
                                     )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Alertas de Intrusión */}
+            {isAlertsModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-amber-50/50">
+                            <h3 className="font-black text-amber-700 text-lg flex items-center gap-2">
+                                <Bell size={20}/>
+                                Permisos de Alerta
+                            </h3>
+                            <button onClick={() => { setIsAlertsModalOpen(false); resetAlertsFlow(); }} className="text-amber-500 hover:text-amber-700 bg-amber-100/50 hover:bg-amber-100 p-2 rounded-full transition-colors"><X size={20}/></button>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            {alertsStep === 'idle' ? (
+                                <div className="space-y-5">
+                                    <p className="text-sm text-gray-500 leading-relaxed text-center">
+                                        Estás intentando modificar a dónde se envían tus alertas de seguridad (o apagarlas). Para proteger tu cuenta, requerimos autorización 2FA.
+                                    </p>
+                                    <button
+                                        onClick={sendAlertsCode}
+                                        disabled={saving}
+                                        className="w-full rounded-2xl bg-amber-500 text-white font-bold px-4 py-4 hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-lg shadow-amber-500/20"
+                                    >
+                                        {saving ? 'Generando...' : 'Solicitar Código de Autorización'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-5">
+                                    <p className="text-sm text-center text-gray-500 leading-relaxed">
+                                        Hemos enviado el código de autorización a <strong className="text-gray-900 block mt-1">{settings.maskedTwoFactorEmail || 'tu correo'}</strong>.
+                                    </p>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={6}
+                                        value={alertsCode}
+                                        onChange={(e) => setAlertsCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        placeholder="000000"
+                                        className="w-full rounded-2xl border border-amber-200 px-4 py-5 text-center text-3xl font-black tracking-[0.4em] outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 bg-amber-50/50 text-amber-900"
+                                    />
+                                    <button
+                                        onClick={verifyAlertsCode}
+                                        disabled={saving || alertsCode.length !== 6}
+                                        className="w-full rounded-2xl bg-amber-500 text-white font-bold px-4 py-4 hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-lg shadow-amber-500/20"
+                                    >
+                                        {saving ? 'Aplicando cambios...' : 'Autorizar y Guardar Cambios'}
+                                    </button>
                                 </div>
                             )}
                         </div>

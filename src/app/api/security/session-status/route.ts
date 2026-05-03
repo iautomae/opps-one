@@ -5,6 +5,7 @@ import {
     getClientSecurityInfo,
     getLatestSuccessfulAccess,
     getOrCreateSecuritySettings,
+    getAlertDestinations,
     isCountryAllowed,
     isSuspiciousComparedToLastLogin,
     issueSecurityClearance,
@@ -35,13 +36,16 @@ export async function GET(request: Request) {
             metadata: { allowedCountries: settings.allowed_countries || ['PE'] },
         });
 
-        if (settings.notify_on_suspicious && (settings.alert_email || profile?.email)) {
-            await sendSuspiciousAccessAlert({
-                to: settings.alert_email || profile?.email || context.profile.email || '',
-                email: profile?.email || context.profile.email,
-                reason: `País no permitido (${clientInfo.countryCode || 'desconocido'})`,
-                request,
-            });
+        if (settings.notify_on_suspicious) {
+            const destinations = getAlertDestinations(settings, profile?.email || context.profile.email);
+            if (destinations.length > 0) {
+                await sendSuspiciousAccessAlert({
+                    to: destinations,
+                    email: profile?.email || context.profile.email,
+                    reason: `País no permitido (${clientInfo.countryCode || 'desconocido'})`,
+                    request,
+                });
+            }
         }
 
         return NextResponse.json(

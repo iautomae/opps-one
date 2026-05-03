@@ -208,7 +208,7 @@ export async function getOrCreateSecuritySettings(profileId: string, email?: str
     return created;
 }
 
-export type OtpPurpose = 'setup_email' | 'login' | 'change_2fa_current_email' | 'change_2fa_new_email';
+export type OtpPurpose = 'setup_email' | 'login' | 'change_2fa_current_email' | 'change_2fa_new_email' | 'disable_2fa' | 'alerts';
 
 export async function createOtpChallenge(params: {
     profileId: string;
@@ -370,7 +370,7 @@ export async function sendSecurityCodeEmail(params: {
 }
 
 export async function sendSuspiciousAccessAlert(params: {
-    to: string;
+    to: string | string[];
     email: string | null;
     reason: string;
     request: Request;
@@ -399,6 +399,26 @@ export async function sendSuspiciousAccessAlert(params: {
             </div>
         `,
     });
+}
+
+export function getAlertDestinations(settings: SecuritySettings, profileEmail: string | null | undefined): string[] {
+    const destinations: string[] = [];
+    const primaryEmail = profileEmail || '';
+    
+    if (settings.alert_email === '2fa' && settings.two_factor_email) {
+        destinations.push(settings.two_factor_email);
+    } else if (settings.alert_email === 'both') {
+        if (primaryEmail) destinations.push(primaryEmail);
+        if (settings.two_factor_email) destinations.push(settings.two_factor_email);
+    } else {
+        if (settings.alert_email && settings.alert_email.includes('@')) {
+            destinations.push(settings.alert_email);
+        } else if (primaryEmail) {
+            destinations.push(primaryEmail);
+        }
+    }
+    
+    return Array.from(new Set(destinations));
 }
 
 export function isCountryAllowed(settings: SecuritySettings, countryCode: string | null) {
