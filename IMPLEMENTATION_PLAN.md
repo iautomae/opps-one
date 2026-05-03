@@ -1,43 +1,44 @@
 # IMPLEMENTATION_PLAN.md
 
-## Objetivo
-Atender la solicitud de seguridad sobre la doble verificación (2FA):
-1. **Aclaración sobre el cambio de correo**: Explicar y verificar que el flujo de *cambio de correo* ya funciona como solicitaste (el primer código llega al correo 2FA actual antes de permitir colocar uno nuevo).
-2. **Desactivación Segura de 2FA**: Prevenir que cualquier persona con la sesión abierta pueda desactivar el 2FA con un simple clic. Requerir un código OTP enviado al correo 2FA configurado para poder apagarlo.
+## Objetivo del Rediseño
+Transformar la pantalla de seguridad de una vista larga y saturada de campos, a un **Dashboard Compacto y Profesional** (estilo "App Nativa"). Todo encajará en una sola pantalla sin necesidad de hacer scroll hacia abajo, utilizando ventanas modales (pop-ups elegantes) para ocultar la complejidad de los formularios.
 
-## Estado Actual
-- **Cambiar correo 2FA**: ✅ Ya está implementado así. Cuando intentas cambiar el correo, el código que te pide bajo "Código del correo actual" se envía a la variable `two_factor_email`. Solo si validas ese correo, se te permite validar el nuevo. ¡Esto ya es 100% seguro!
-- **Desactivar 2FA**: ❌ Vulnerable. Actualmente, el botón "Desactivar doble verificación" simplemente hace una petición POST y lo apaga en la base de datos sin preguntar nada. 
+## Concepto Visual y UX (Experiencia de Usuario)
+La página se dividirá en dos capas principales:
+
+### 1. El Panel Principal (Fondo)
+Estará compuesto por **3 Tarjetas (Cards)** limpias y compactas, dispuestas en una cuadrícula (grid). 
+- **Tarjeta 1: Acceso Regional**: Solo un icono de escudo, el texto "Acceso restringido" y el estado "Solo Perú".
+- **Tarjeta 2: Alertas de Seguridad**: Eliminaremos el campo de correo confuso. Solo habrá un texto explicativo y un "Switch" (interruptor moderno) para encender/apagar las notificaciones de inicios de sesión sospechosos.
+- **Tarjeta 3: Verificación en Dos Pasos (2FA)**: Un indicador brillante de estado (Verde si está activo, Gris si no). Mostrará el correo enmascarado.
+  - Tendrá 2 botones muy limpios: **"Configurar/Cambiar Correo"** y **"Desactivar"** (si está encendido).
+
+### 2. Capa de Modales (Pop-ups)
+Toda la lógica de escribir correos y códigos ya no ensuciará la pantalla principal. Cuando el usuario haga clic en una acción, el fondo se oscurecerá sutilmente (efecto *Glassmorphism* / desenfoque) y aparecerá una ventana flotante centrada:
+- **Modal de Desactivación**: Aparece solo si le das a desactivar. Te pide el código OTP de 6 dígitos.
+- **Modal de Cambio de Correo (Flujo paso a paso)**: 
+  - *Paso 1:* Pide el nuevo correo.
+  - *Paso 2:* La tarjeta gira o cambia suavemente para pedir el código de tu correo actual.
+  - *Paso 3:* Pide el código del correo nuevo.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> El plan es modificar el endpoint principal para bloquear la desactivación directa del 2FA. Cuando alguien haga clic en "Desactivar", el sistema ocultará el botón y mostrará un campo de código, enviando previamente un OTP al correo 2FA. 
+> **Cambios a Nivel Código:**
+> 1. Voy a borrar el campo `alertEmail` de la interfaz para siempre. Las alertas llegarán a tu correo principal o 2FA.
+> 2. Todo el código actual de `page.tsx` será borrado y reescrito utilizando componentes modales y un grid compacto con Tailwind CSS.
 >
-> ¿Estás de acuerdo con implementar este nuevo flujo para el botón de Desactivar?
+> ¿Te gusta esta propuesta visual basada en Tarjetas de Estado + Modales Flotantes? Si me das el "Ok", empiezo a construir la interfaz.
 
 ## Proposed Changes
 
-### [MODIFY] `src/app/api/security/settings/route.ts`
-- Modificar el método POST para que rechace automáticamente cualquier intento de enviar `{ twoFactorEnabled: false }`. Obligaremos a que el apagado del 2FA se haga exclusivamente por la ruta de verificación de OTP.
-
-### [MODIFY] `src/app/api/security/settings/send-code/route.ts`
-- Agregar soporte para un nuevo parámetro `action: 'disable_2fa'`.
-- Generar un OTP con el propósito especial `disable_2fa` y mandarlo por correo (al correo 2FA configurado).
-
-### [MODIFY] `src/app/api/security/settings/verify-code/route.ts`
-- Agregar soporte para verificar el propósito `disable_2fa`.
-- Si el código es correcto, actualizar `profile_security_settings` poniendo `two_factor_enabled: false`.
-
 ### [MODIFY] `src/app/(app)/settings/profile/page.tsx`
-- Crear un nuevo estado visual para el botón de desactivar:
-  - Si el usuario hace clic en "Desactivar", la UI pide el OTP en lugar de apagarlo directamente.
-  - Ocultar el botón original y mostrar el input de código de desactivación con botones de "Confirmar" y "Cancelar".
+- **Reescritura Total:** Se eliminará el layout vertical y se implementará un `grid-cols-1 md:grid-cols-3` compacto.
+- **Implementación de Modales:** Crearemos un componente `<Modal />` interno que use `fixed inset-0 backdrop-blur-sm z-50`.
+- **Limpieza de Estado:** Se mantendrá la persistencia con `sessionStorage`, pero atada a la visibilidad de los modales.
 
 ## Verification Plan
-
-### Pruebas Manuales
-1. Al hacer clic en "Desactivar doble verificación", el panel no debe apagarse, sino que debe avisar que se envió un código al correo 2FA.
-2. Ingresar un código incorrecto debe fallar.
-3. Ingresar el código correcto enviado al correo 2FA debe apagar exitosamente el 2FA.
-4. (Opcional) Intentar hackear la petición mandando un cURL directamente al endpoint original debe resultar en un error `400 Bad Request`.
+1. Verificar que la pantalla no requiera scroll en resoluciones de escritorio normales.
+2. Confirmar que al abrir un modal, el usuario no pueda interactuar con el fondo por error.
+3. Probar todo el flujo 2FA (activar, cambiar, desactivar) puramente desde los modales.
+4. Asegurar que las notificaciones (alertas de guardado) se vean elegantes, estilo "toast", para no romper el layout.
