@@ -43,38 +43,23 @@ export default function ProfileSecurityPage() {
     const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
 
     // Form States
-    const [newTwoFactorEmail, setNewTwoFactorEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_newEmail') || '' : '');
+    const [newTwoFactorEmail, setNewTwoFactorEmail] = useState('');
     const [currentCode, setCurrentCode] = useState('');
     const [newEmailCode, setNewEmailCode] = useState('');
-    const [currentChallengeId, setCurrentChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_currentChallenge') || '' : '');
-    const [newEmailChallengeId, setNewEmailChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_newChallenge') || '' : '');
-    const [changeStep, setChangeStep] = useState<ChangeStep>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_step') as ChangeStep) || 'idle' : 'idle');
-    const [maskedCurrentEmail, setMaskedCurrentEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_maskedCurrent') || '' : '');
-    const [maskedNewEmail, setMaskedNewEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_maskedNew') || '' : '');
+    const [currentChallengeId, setCurrentChallengeId] = useState('');
+    const [newEmailChallengeId, setNewEmailChallengeId] = useState('');
+    const [changeStep, setChangeStep] = useState<ChangeStep>('idle');
+    const [maskedCurrentEmail, setMaskedCurrentEmail] = useState('');
+    const [maskedNewEmail, setMaskedNewEmail] = useState('');
     
-    const [disableStep, setDisableStep] = useState<'idle' | 'sent'>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_disableStep') as 'idle' | 'sent') || 'idle' : 'idle');
+    const [disableStep, setDisableStep] = useState<'idle' | 'sent'>('idle');
     const [disableCode, setDisableCode] = useState('');
-    const [disableChallengeId, setDisableChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_disableChallenge') || '' : '');
+    const [disableChallengeId, setDisableChallengeId] = useState('');
 
-    const [alertsStep, setAlertsStep] = useState<'idle' | 'sent'>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_alertsStep') as 'idle' | 'sent') || 'idle' : 'idle');
+    const [alertsStep, setAlertsStep] = useState<'idle' | 'sent'>('idle');
     const [alertsCode, setAlertsCode] = useState('');
-    const [alertsChallengeId, setAlertsChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_alertsChallenge') || '' : '');
+    const [alertsChallengeId, setAlertsChallengeId] = useState('');
     const [tempNotifyOnSuspicious, setTempNotifyOnSuspicious] = useState<boolean | null>(null);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            sessionStorage.setItem('2fa_newEmail', newTwoFactorEmail);
-            sessionStorage.setItem('2fa_currentChallenge', currentChallengeId);
-            sessionStorage.setItem('2fa_newChallenge', newEmailChallengeId);
-            sessionStorage.setItem('2fa_step', changeStep);
-            sessionStorage.setItem('2fa_maskedCurrent', maskedCurrentEmail);
-            sessionStorage.setItem('2fa_maskedNew', maskedNewEmail);
-            sessionStorage.setItem('2fa_disableStep', disableStep);
-            sessionStorage.setItem('2fa_disableChallenge', disableChallengeId);
-            sessionStorage.setItem('2fa_alertsStep', alertsStep);
-            sessionStorage.setItem('2fa_alertsChallenge', alertsChallengeId);
-        }
-    }, [newTwoFactorEmail, currentChallengeId, newEmailChallengeId, changeStep, maskedCurrentEmail, maskedNewEmail, disableStep, disableChallengeId, alertsStep, alertsChallengeId]);
 
     useEffect(() => {
         if (changeStep !== 'idle') setIsChangeModalOpen(true);
@@ -105,6 +90,19 @@ export default function ProfileSecurityPage() {
         loadSettings();
     }, []);
 
+    // Also clean up any lingering sessionStorage from the old version
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const keysToRemove = [
+                '2fa_newEmail', '2fa_currentChallenge', '2fa_newChallenge', 
+                '2fa_step', '2fa_maskedCurrent', '2fa_maskedNew',
+                '2fa_disableStep', '2fa_disableChallenge',
+                '2fa_alertsStep', '2fa_alertsChallenge'
+            ];
+            keysToRemove.forEach(key => sessionStorage.removeItem(key));
+        }
+    }, []);
+
     function resetEmailChangeFlow() {
         setCurrentCode('');
         setNewEmailCode('');
@@ -113,24 +111,12 @@ export default function ProfileSecurityPage() {
         setChangeStep('idle');
         setMaskedCurrentEmail('');
         setMaskedNewEmail('');
-        if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('2fa_newEmail');
-            sessionStorage.removeItem('2fa_currentChallenge');
-            sessionStorage.removeItem('2fa_newChallenge');
-            sessionStorage.removeItem('2fa_step');
-            sessionStorage.removeItem('2fa_maskedCurrent');
-            sessionStorage.removeItem('2fa_maskedNew');
-        }
     }
 
     function resetDisableFlow() {
         setDisableCode('');
         setDisableChallengeId('');
         setDisableStep('idle');
-        if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('2fa_disableStep');
-            sessionStorage.removeItem('2fa_disableChallenge');
-        }
     }
 
     function resetAlertsFlow() {
@@ -138,10 +124,6 @@ export default function ProfileSecurityPage() {
         setAlertsChallengeId('');
         setAlertsStep('idle');
         setTempNotifyOnSuspicious(null);
-        if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('2fa_alertsStep');
-            sessionStorage.removeItem('2fa_alertsChallenge');
-        }
     }
 
     async function getAccessToken() {
@@ -501,7 +483,7 @@ export default function ProfileSecurityPage() {
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center p-6 border-b border-gray-100">
                             <h3 className="font-black text-gray-900 text-lg">Configuración de Seguridad</h3>
-                            <button onClick={() => setIsChangeModalOpen(false)} className="text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition-colors"><X size={20}/></button>
+                            <button onClick={() => { setIsChangeModalOpen(false); resetEmailChangeFlow(); }} className="text-gray-400 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition-colors"><X size={20}/></button>
                         </div>
                         <div className="p-6 space-y-6">
                             {changeStep === 'idle' && (
