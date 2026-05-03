@@ -68,6 +68,17 @@ export async function ensureSecurityTables() {
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
             );
 
+            -- Add columns to existing table if they don't exist
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profile_security_settings' AND column_name='lock_pin_hash') THEN
+                    ALTER TABLE public.profile_security_settings ADD COLUMN lock_pin_hash TEXT NULL;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profile_security_settings' AND column_name='lock_timeout_minutes') THEN
+                    ALTER TABLE public.profile_security_settings ADD COLUMN lock_timeout_minutes INTEGER NOT NULL DEFAULT 15;
+                END IF;
+            END $$;
+
             CREATE TABLE IF NOT EXISTS public.auth_otp_challenges (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,

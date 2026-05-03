@@ -180,8 +180,8 @@ export default function ProfileSecurityPage() {
 
     async function handleUpdatePin(e: React.FormEvent) {
         e.preventDefault();
-        if (newPin.length < 4) {
-            setError('El PIN debe tener al menos 4 dígitos.');
+        if (newPin.length < 6) {
+            setError('El PIN debe tener al menos 6 dígitos.');
             return;
         }
         if (newPin !== confirmPin) {
@@ -788,14 +788,14 @@ export default function ProfileSecurityPage() {
                             
                             <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nuevo PIN (min. 4 dígitos)</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nuevo PIN (min. 6 dígitos)</label>
                                     <input
                                         type="password"
                                         inputMode="numeric"
                                         maxLength={8}
                                         value={newPin}
                                         onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                                        placeholder="****"
+                                        placeholder="******"
                                         className="w-full rounded-2xl border border-gray-200 px-4 py-4 text-center text-2xl font-black tracking-[0.5em] outline-none focus:ring-2 focus:ring-brand-turquoise/20 focus:border-brand-turquoise bg-gray-50/50"
                                     />
                                 </div>
@@ -807,7 +807,7 @@ export default function ProfileSecurityPage() {
                                         maxLength={8}
                                         value={confirmPin}
                                         onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                                        placeholder="****"
+                                        placeholder="******"
                                         className="w-full rounded-2xl border border-gray-200 px-4 py-4 text-center text-2xl font-black tracking-[0.5em] outline-none focus:ring-2 focus:ring-brand-turquoise/20 focus:border-brand-turquoise bg-gray-50/50"
                                     />
                                 </div>
@@ -815,7 +815,7 @@ export default function ProfileSecurityPage() {
 
                             <button
                                 type="submit"
-                                disabled={saving || newPin.length < 4 || newPin !== confirmPin}
+                                disabled={saving || newPin.length < 6 || newPin !== confirmPin}
                                 className="w-full rounded-2xl bg-brand-turquoise text-black font-bold px-4 py-4 disabled:opacity-50 transition-colors shadow-lg shadow-brand-turquoise/20 flex justify-center items-center gap-2"
                             >
                                 {saving ? <LoaderCircle className="animate-spin" size={18}/> : 'Guardar PIN'}

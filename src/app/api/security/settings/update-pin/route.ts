@@ -13,8 +13,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { pin } = body;
 
-    if (!pin || typeof pin !== 'string' || pin.length < 4) {
-        return NextResponse.json({ error: 'El PIN debe tener al menos 4 dígitos.' }, { status: 400 });
+    if (!pin || typeof pin !== 'string' || pin.length < 6) {
+        return NextResponse.json({ error: 'El PIN debe tener al menos 6 dígitos.' }, { status: 400 });
     }
 
     const settings = await getOrCreateSecuritySettings(context.profile.id);

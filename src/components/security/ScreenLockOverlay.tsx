@@ -52,7 +52,7 @@ export function ScreenLockOverlay({ children }: { children: React.ReactNode }) {
 
     const handleUnlock = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (pin.length < 4) return;
+        if (pin.length < 6) return;
 
         setVerifying(true);
         setError('');
@@ -117,14 +117,14 @@ export function ScreenLockOverlay({ children }: { children: React.ReactNode }) {
                             maxLength={8}
                             value={pin}
                             onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                            placeholder="****"
+                            placeholder="******"
                             className="w-full bg-black/20 border border-white/10 rounded-2xl px-12 py-4 text-white text-2xl tracking-[0.5em] text-center focus:ring-2 focus:ring-brand-turquoise/50 focus:border-brand-turquoise outline-none transition-all"
                         />
                     </div>
                     
                     <button
                         type="submit"
-                        disabled={verifying || pin.length < 4}
+                        disabled={verifying || pin.length < 6}
                         className="w-full bg-brand-turquoise text-black font-bold py-4 rounded-2xl hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(44,219,155,0.2)]"
                     >
                         {verifying ? (
