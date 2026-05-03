@@ -536,11 +536,9 @@ export default function ProfileSecurityPage() {
                                 onChange={(e) => saveBaseSettings({ lockTimeoutMinutes: parseInt(e.target.value) })}
                                 className="bg-transparent border-none text-[11px] font-bold text-slate-700 focus:ring-0 cursor-pointer"
                             >
-                                <option value={1}>1 min</option>
-                                <option value={5}>5 mins</option>
-                                <option value={15}>15 mins</option>
-                                <option value={30}>30 mins</option>
-                                <option value={0}>Nunca</option>
+                                <option value={15}>15 mins inactividad</option>
+                                <option value={30}>30 mins inactividad</option>
+                                <option value={0}>Nunca bloquear</option>
                             </select>
                         </div>
                         <button 
