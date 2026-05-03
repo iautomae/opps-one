@@ -163,7 +163,7 @@ export default function ProfileSecurityPage() {
     }
 
     function handleAlertChange(notifyOnSuspicious: boolean) {
-        if (!settings.twoFactorEnabled) {
+        if (!settings.twoFactorEnabled || notifyOnSuspicious === true) {
             saveBaseSettings(notifyOnSuspicious);
             return;
         }
