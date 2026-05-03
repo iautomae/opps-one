@@ -33,7 +33,7 @@ function normalizeName(name: string): string {
 export default function PlataformasPage() {
     const { profile, loading: profileLoading } = useProfile();
     const router = useRouter();
-    const { platforms, loading: platformsLoading, createPlatform, updatePlatform, reorderPlatforms } = usePlatforms();
+    const { platforms, loading: platformsLoading, createPlatform, updatePlatform, deletePlatform, reorderPlatforms } = usePlatforms();
 
     // Create modal state
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -197,6 +197,24 @@ export default function PlataformasPage() {
                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                         Activo
                                     </span>
+                                    {!isEditing && (
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm(`¿Estás seguro de eliminar "${platform.name}"? Esta acción no se puede deshacer.`)) {
+                                                    try {
+                                                        await deletePlatform(platform.id);
+                                                        setToast({ message: 'Plataforma eliminada.', type: 'success' });
+                                                    } catch (err: any) {
+                                                        setToast({ message: err.message, type: 'error' });
+                                                    }
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-all opacity-0 group-hover:opacity-100"
+                                            title="Eliminar plataforma"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Icon */}

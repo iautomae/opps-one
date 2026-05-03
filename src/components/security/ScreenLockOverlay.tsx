@@ -38,6 +38,18 @@ export function ScreenLockOverlay({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
+        const handleManualLock = () => {
+            if (hasPin) {
+                setIsLocked(true);
+                sessionStorage.setItem('app_locked_at', new Date().toISOString());
+            }
+        };
+
+        window.addEventListener('app-lock', handleManualLock);
+        return () => window.removeEventListener('app-lock', handleManualLock);
+    }, [hasPin]);
+
+    useEffect(() => {
         loadLockSettings();
     }, [loadLockSettings]);
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
-    FileText, Users, Briefcase, Shirt, Heart, Globe, Zap, Package, Layers
+    FileText, Users, Briefcase, Shirt, Heart, Globe, Zap, Package, Layers, Target, Building2
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -33,7 +33,7 @@ export function deriveRouteKey(name: string): string {
 
 // Map icon names to actual Lucide components
 const ICON_MAP: Record<string, LucideIcon> = {
-    FileText, Users, Briefcase, Shirt, Heart, Globe, Zap, Package, Layers,
+    FileText, Users, Briefcase, Shirt, Heart, Globe, Zap, Package, Layers, Target, Building2,
 };
 
 // Map color names to Tailwind classes
@@ -140,5 +140,20 @@ export function usePlatforms() {
         if (!res.ok) await fetchPlatforms(); // Revert on error
     };
 
-    return { platforms, loading, error, createPlatform, updatePlatform, reorderPlatforms, refetch: fetchPlatforms };
+    const deletePlatform = async (id: string): Promise<void> => {
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const res = await fetch('/api/admin/platforms', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar plataforma');
+        await fetchPlatforms();
+    };
+
+    return { platforms, loading, error, createPlatform, updatePlatform, deletePlatform, reorderPlatforms, refetch: fetchPlatforms };
 }

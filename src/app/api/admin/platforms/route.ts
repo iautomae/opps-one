@@ -122,7 +122,7 @@ export async function PATCH(req: Request) {
         const { response } = await requireAuth(req, ['admin']);
         if (response) return response;
 
-        const { id, name, description, reorder } = await req.json();
+        const { id, name, description, icon, reorder } = await req.json();
 
         // Reorder: receives array of { id, sort_order }
         if (reorder && Array.isArray(reorder)) {
@@ -137,6 +137,7 @@ export async function PATCH(req: Request) {
         const updateData: Record<string, string> = {};
         if (name !== undefined) updateData.name = String(name).trim();
         if (description !== undefined) updateData.description = String(description).trim();
+        if (icon !== undefined) updateData.icon = String(icon).trim();
 
         if (Object.keys(updateData).length === 0) {
             return NextResponse.json({ error: 'Nada que actualizar.' }, { status: 400 });
@@ -158,5 +159,27 @@ export async function PATCH(req: Request) {
     } catch (error: unknown) {
         console.error('PATCH /api/admin/platforms error:', error);
         return NextResponse.json({ error: 'Error al actualizar la plataforma.' }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const { response } = await requireAuth(req, ['admin']);
+        if (response) return response;
+
+        const { id } = await req.json();
+        if (!id) return NextResponse.json({ error: 'ID requerido.' }, { status: 400 });
+
+        const { error } = await supabaseAdmin
+            .from('platforms')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        return NextResponse.json({ success: true });
+    } catch (error: unknown) {
+        console.error('DELETE /api/admin/platforms error:', error);
+        return NextResponse.json({ error: 'Error al eliminar la plataforma.' }, { status: 500 });
     }
 }

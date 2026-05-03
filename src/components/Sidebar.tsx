@@ -18,6 +18,7 @@ import {
   Receipt,
   ClipboardList,
   Layers,
+  Lock,
   type LucideIcon
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -178,7 +179,7 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom Actions */}
-      <div className="mt-auto flex flex-col gap-2">
+      <div className="mt-auto flex flex-col gap-2 relative">
         <button
           onClick={() => setActiveCategory('settings')}
           className={cn(
@@ -193,13 +194,40 @@ export function Sidebar() {
             size={20}
             style={activeCategory === 'settings' ? { color: '#14b8a6' } : {}}
           />
+          {/* Tooltip */}
+          <div className="absolute left-[70px] bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-all translate-x-[-10px] group-hover:translate-x-0 z-50 shadow-xl whitespace-nowrap">
+            Seguridad
+          </div>
         </button>
-        <button
-          onClick={() => signOut()}
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-50 transition-all duration-300 group relative"
-        >
-          <LogOut size={20} />
-        </button>
+
+        <div className="relative group/logout">
+          <button
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-50 transition-all duration-300 group relative"
+          >
+            <LogOut size={20} />
+          </button>
+
+          {/* Logout/Lock Dropdown */}
+          <div className="absolute bottom-0 left-[60px] mb-0 opacity-0 invisible group-hover/logout:opacity-100 group-hover/logout:visible group-hover/logout:translate-x-2 transition-all duration-200 z-[100]">
+            <div className="bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 p-2 min-w-[140px] flex flex-col gap-1 animate-in slide-in-from-left-2">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('app-lock'))}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-brand-primary transition-all text-left"
+              >
+                <Lock size={14} />
+                Bloquear
+              </button>
+              <div className="h-[1px] bg-slate-100 mx-2" />
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-all text-left"
+              >
+                <LogOut size={14} />
+                Salir
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
