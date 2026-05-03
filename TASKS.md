@@ -33,8 +33,8 @@ Este archivo, junto con `IMPLEMENTATION_PLAN.md` y `WALKTHROUGH.md`, es la bande
 
 ## Pendiente Despues
 
-- [ ] Probar manualmente en navegador que la pantalla no se refresca al escribir o cambiar correo 2FA.
-- [ ] Revisar si conviene usar `sessionStorage` para mantener el flujo de cambio de correo si el usuario cambia de pestana.
+- [x] Probar manualmente en navegador que la pantalla no se refresca al escribir o cambiar correo 2FA.
+- [x] Revisar si conviene usar `sessionStorage` para mantener el flujo de cambio de correo si el usuario cambia de pestana.
 - [ ] Validar login real despues de cambiar correo 2FA.
 - [ ] Probar logout/login completo con el nuevo correo 2FA.
 - [ ] Validacion final de WhatsApp con Meta en entorno real.

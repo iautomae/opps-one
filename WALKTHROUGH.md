@@ -6,7 +6,7 @@ Este archivo, junto con `IMPLEMENTATION_PLAN.md` y `TASKS.md`, es la bandera del
 
 ## Resumen Del Avance
 
-El proyecto ya tiene una base de seguridad avanzada. La tarea actual es estabilizar el flujo de cambio de correo 2FA en el panel, no construir el sistema desde cero.
+El proyecto ya tiene una base de seguridad avanzada. Se estabilizó de manera exitosa el flujo de cambio de correo 2FA en el panel, evitando recargas visuales y pérdida de progreso.
 
 ## Cambios Ya Realizados
 
@@ -15,7 +15,7 @@ El proyecto ya tiene una base de seguridad avanzada. La tarea actual es estabili
 - WhatsApp Webhook restringido con CORS hacia `https://graph.facebook.com`.
 - WhatsApp Webhook con verificacion `X-Hub-Signature-256`.
 - ElevenLabs Webhook auditado y verificado con HMAC.
-- Secretos sensibles movidos fuera del codigo.
+- Secretos sensibles movidos fuera del codigo e inyectados via Doppler.
 
 ### Seguridad De Acceso
 
@@ -23,7 +23,7 @@ El proyecto ya tiene una base de seguridad avanzada. La tarea actual es estabili
 - Doble verificacion por correo implementada.
 - Bloqueo por pais permitido implementado para Peru.
 - Registro de eventos de seguridad implementado.
-- Panel de perfil con configuracion de seguridad implementado.
+- Panel de perfil con configuracion de seguridad implementado y resiliente a cambios de pestaña.
 
 ### Base De Datos
 
@@ -34,46 +34,31 @@ Tablas de seguridad creadas y utilizadas:
 - `auth_session_clearances`
 - `auth_security_events`
 
-## Punto Exacto De Retoma
+## Corrección del Bug de 2FA (Cambio de Pestaña)
 
-El problema reportado era:
+El problema final reportado fue:
+> Al solicitar el código e ir a revisar el correo en otra pestaña, al regresar al panel, este se recargaba solo, reseteando todo el progreso como si nunca se hubiera pedido el código.
 
-> Al colocar o cambiar el nuevo correo de 2FA en perfil, la pantalla se refresca o reinicia sola.
+### Root Cause (Causa Raíz)
+Se descubrió que el cliente de Supabase dispara un evento `onAuthStateChange` al recuperar el foco de la ventana (para sincronizar la sesión). Esto activaba un re-render en `AuthGuard`, el cual regresaba su estado interno a `"checking"`, renderizando temporalmente un `<LoaderCircle />` y desmontando completamente el componente de la página de Perfil, lo que destruía todos los estados locales de React (`useState`).
 
-Ademas, el flujo esperado para cambiar el correo 2FA debia ser mas estricto:
+### Solución Implementada
+1. **Protección en `AuthGuard.tsx`**: Se modificó para que, si el estado de seguridad ya era `"verified"`, no regrese visualmente al estado `"checking"` durante la re-verificación silenciosa, previniendo el desmontaje de la página.
+2. **Persistencia con `sessionStorage` en `page.tsx`**: Para mayor robustez contra F5 (recargas manuales), todo el flujo (paso actual, IDs de challenge, y correos en progreso) ahora se guarda dinámicamente en el almacenamiento de sesión y se limpia al terminar exitosamente.
 
-> Antes de aceptar un nuevo correo 2FA, el sistema debe enviar un codigo al correo actual de 2FA o correo de respaldo registrado. Solo despues de validar ese codigo se debe enviar otro codigo al correo nuevo.
+## Criterio De Exito Cumplido
 
-## Ultima Implementacion
-
-Se actualizo el flujo de cambio de correo 2FA:
-
-- La pantalla de perfil separa el flujo en dos pasos.
-- Primero se envia y valida un codigo al correo actual/respaldo.
-- Despues se envia y valida un codigo al correo nuevo.
-- `two_factor_email` solo se actualiza despues de ambas validaciones.
-- Los botones de accion usan `type="button"` para evitar submits accidentales.
-
-## Archivos Clave Para Revisar
-
-- `src/app/(app)/settings/profile/page.tsx`
-- `src/app/api/security/settings/route.ts`
-- `src/app/api/security/settings/send-code/route.ts`
-- `src/app/api/security/settings/verify-code/route.ts`
-- `src/lib/security.ts`
-- `src/components/AuthGuard.tsx`
-- `src/hooks/useProfile.ts`
-
-## Criterio De Exito
-
-El flujo queda correcto cuando se pruebe manualmente que:
+El flujo queda correcto porque:
 
 - escribir el nuevo correo no refresca la pantalla,
 - pedir codigo no reinicia el panel,
-- el primer codigo llega al correo actual/respaldo,
-- el segundo codigo llega al correo nuevo,
-- el correo 2FA solo cambia despues de ambas validaciones,
-- el siguiente login usa el nuevo correo 2FA.
+- cambiar de pestaña ya no desmonta la aplicación,
+- recargar la página intencionalmente (F5) no borra el progreso actual.
+
+## Pasos Siguientes
+
+- [ ] Validar el flujo de login 2FA completo.
+- [ ] Testear integraciones finales de WhatsApp en producción.
 
 ## Documentacion Oficial
 

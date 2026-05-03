@@ -111,7 +111,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             }
 
             if (user) {
-                setSecurityState('checking');
+                setSecurityState(prev => prev === 'verified' ? 'verified' : 'checking');
                 checkSecurity();
             }
         }

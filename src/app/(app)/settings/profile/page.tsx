@@ -34,14 +34,25 @@ function getErrorMessage(error: unknown, fallback: string) {
 export default function ProfileSecurityPage() {
     const { profile } = useProfile();
     const [settings, setSettings] = useState<SecuritySettingsState>(DEFAULT_SETTINGS);
-    const [newTwoFactorEmail, setNewTwoFactorEmail] = useState('');
+    const [newTwoFactorEmail, setNewTwoFactorEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_newEmail') || '' : '');
     const [currentCode, setCurrentCode] = useState('');
     const [newEmailCode, setNewEmailCode] = useState('');
-    const [currentChallengeId, setCurrentChallengeId] = useState('');
-    const [newEmailChallengeId, setNewEmailChallengeId] = useState('');
-    const [changeStep, setChangeStep] = useState<ChangeStep>('idle');
-    const [maskedCurrentEmail, setMaskedCurrentEmail] = useState('');
-    const [maskedNewEmail, setMaskedNewEmail] = useState('');
+    const [currentChallengeId, setCurrentChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_currentChallenge') || '' : '');
+    const [newEmailChallengeId, setNewEmailChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_newChallenge') || '' : '');
+    const [changeStep, setChangeStep] = useState<ChangeStep>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_step') as ChangeStep) || 'idle' : 'idle');
+    const [maskedCurrentEmail, setMaskedCurrentEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_maskedCurrent') || '' : '');
+    const [maskedNewEmail, setMaskedNewEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_maskedNew') || '' : '');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem('2fa_newEmail', newTwoFactorEmail);
+            sessionStorage.setItem('2fa_currentChallenge', currentChallengeId);
+            sessionStorage.setItem('2fa_newChallenge', newEmailChallengeId);
+            sessionStorage.setItem('2fa_step', changeStep);
+            sessionStorage.setItem('2fa_maskedCurrent', maskedCurrentEmail);
+            sessionStorage.setItem('2fa_maskedNew', maskedNewEmail);
+        }
+    }, [newTwoFactorEmail, currentChallengeId, newEmailChallengeId, changeStep, maskedCurrentEmail, maskedNewEmail]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
@@ -85,6 +96,14 @@ export default function ProfileSecurityPage() {
         setChangeStep('idle');
         setMaskedCurrentEmail('');
         setMaskedNewEmail('');
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('2fa_newEmail');
+            sessionStorage.removeItem('2fa_currentChallenge');
+            sessionStorage.removeItem('2fa_newChallenge');
+            sessionStorage.removeItem('2fa_step');
+            sessionStorage.removeItem('2fa_maskedCurrent');
+            sessionStorage.removeItem('2fa_maskedNew');
+        }
     }
 
     async function getAccessToken() {
