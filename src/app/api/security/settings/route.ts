@@ -37,6 +37,10 @@ export async function POST(request: Request) {
     const alertEmail = typeof body.alertEmail === 'string' ? body.alertEmail.trim().toLowerCase() : '';
     const twoFactorEnabled = typeof body.twoFactorEnabled === 'boolean' ? body.twoFactorEnabled : undefined;
 
+    if (twoFactorEnabled === false) {
+        return NextResponse.json({ error: 'Para desactivar la doble verificación, usa el flujo de envío de código.' }, { status: 400 });
+    }
+
     const { error } = await supabaseAdmin
         .from('profile_security_settings')
         .upsert({

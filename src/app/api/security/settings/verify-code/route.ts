@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const challengeId = typeof body.challengeId === 'string' ? body.challengeId.trim() : '';
     const code = typeof body.code === 'string' ? body.code.trim() : '';
-    const step = body.step === 'new' ? 'new' : 'current';
+    const step = ['new', 'current', 'disable'].includes(body.step) ? body.step : 'current';
     const currentChallengeId = typeof body.currentChallengeId === 'string' ? body.currentChallengeId.trim() : '';
 
     if (!challengeId || !code) {
@@ -47,6 +47,47 @@ export async function POST(request: Request) {
             success: true,
             step: 'current',
             currentChallengeId: challengeId,
+        });
+    }
+
+    if (step === 'disable') {
+        const verification = await verifyOtpChallenge({
+            profileId: context.profile.id,
+            challengeId,
+            code,
+            purpose: 'disable_2fa',
+        });
+
+        if (!verification.ok) {
+            return NextResponse.json(
+                { error: 'Código inválido o expirado.', reason: verification.reason },
+                { status: 400 }
+            );
+        }
+
+        const { error } = await supabaseAdmin
+            .from('profile_security_settings')
+            .upsert({
+                profile_id: context.profile.id,
+                two_factor_enabled: false,
+            });
+
+        if (error) {
+            return NextResponse.json({ error: 'No se pudo desactivar el 2FA.' }, { status: 500 });
+        }
+
+        await logSecurityEvent({
+            profileId: context.profile.id,
+            email: context.profile.email,
+            eventType: '2FA_DISABLED',
+            request,
+            metadata: { challengeId },
+        });
+
+        return NextResponse.json({
+            success: true,
+            step: 'disable',
+            twoFactorEnabled: false,
         });
     }
 

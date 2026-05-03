@@ -42,6 +42,9 @@ export default function ProfileSecurityPage() {
     const [changeStep, setChangeStep] = useState<ChangeStep>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_step') as ChangeStep) || 'idle' : 'idle');
     const [maskedCurrentEmail, setMaskedCurrentEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_maskedCurrent') || '' : '');
     const [maskedNewEmail, setMaskedNewEmail] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_maskedNew') || '' : '');
+    const [disableStep, setDisableStep] = useState<'idle' | 'sent'>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_disableStep') as 'idle' | 'sent') || 'idle' : 'idle');
+    const [disableCode, setDisableCode] = useState('');
+    const [disableChallengeId, setDisableChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_disableChallenge') || '' : '');
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -51,8 +54,10 @@ export default function ProfileSecurityPage() {
             sessionStorage.setItem('2fa_step', changeStep);
             sessionStorage.setItem('2fa_maskedCurrent', maskedCurrentEmail);
             sessionStorage.setItem('2fa_maskedNew', maskedNewEmail);
+            sessionStorage.setItem('2fa_disableStep', disableStep);
+            sessionStorage.setItem('2fa_disableChallenge', disableChallengeId);
         }
-    }, [newTwoFactorEmail, currentChallengeId, newEmailChallengeId, changeStep, maskedCurrentEmail, maskedNewEmail]);
+    }, [newTwoFactorEmail, currentChallengeId, newEmailChallengeId, changeStep, maskedCurrentEmail, maskedNewEmail, disableStep, disableChallengeId]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
@@ -106,6 +111,16 @@ export default function ProfileSecurityPage() {
         }
     }
 
+    function resetDisableFlow() {
+        setDisableCode('');
+        setDisableChallengeId('');
+        setDisableStep('idle');
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('2fa_disableStep');
+            sessionStorage.removeItem('2fa_disableChallenge');
+        }
+    }
+
     async function getAccessToken() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new Error('Tu sesion expiro.');
@@ -143,6 +158,70 @@ export default function ProfileSecurityPage() {
             setMessage('Configuracion guardada.');
         } catch (err: unknown) {
             setError(getErrorMessage(err, 'No se pudo guardar la configuracion.'));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function sendDisableCode() {
+        setSaving(true);
+        setError('');
+        setMessage('');
+
+        try {
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/send-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ step: 'disable' }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'No se pudo solicitar el código de desactivación.');
+
+            setDisableChallengeId(json.challengeId);
+            setDisableStep('sent');
+            setMessage(`Te enviamos un código a ${json.maskedEmail} para confirmar la desactivación.`);
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo solicitar el código.'));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function verifyDisableCode() {
+        setSaving(true);
+        setError('');
+        setMessage('');
+
+        try {
+            if (disableCode.length !== 6) throw new Error('Ingresa el código completo.');
+
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/verify-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    step: 'disable',
+                    challengeId: disableChallengeId,
+                    code: disableCode,
+                }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'No se pudo verificar el código de desactivación.');
+
+            setSettings((prev) => ({ ...prev, twoFactorEnabled: false }));
+            resetDisableFlow();
+            setMessage('Doble verificación desactivada exitosamente.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo desactivar el 2FA.'));
         } finally {
             setSaving(false);
         }
@@ -507,15 +586,50 @@ export default function ProfileSecurityPage() {
                     >
                         {saving ? 'Guardando...' : 'Guardar alertas'}
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => saveBaseSettings({ twoFactorEnabled: !settings.twoFactorEnabled })}
-                        disabled={saving || !settings.twoFactorEmail}
-                        className="rounded-2xl border border-gray-300 text-gray-900 font-bold px-5 py-3 disabled:opacity-50 flex items-center gap-2"
-                    >
-                        <LockKeyhole size={16} />
-                        {settings.twoFactorEnabled ? 'Desactivar doble verificacion' : 'Activar doble verificacion'}
-                    </button>
+                    {settings.twoFactorEnabled && disableStep === 'sent' ? (
+                        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                value={disableCode}
+                                onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="000000"
+                                className="w-32 rounded-xl border border-red-200 px-4 py-3 text-center tracking-[0.2em] outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={verifyDisableCode}
+                                disabled={saving || disableCode.length !== 6}
+                                className="rounded-xl bg-red-600 text-white font-bold px-5 py-3 disabled:opacity-50"
+                            >
+                                {saving ? 'Verificando...' : 'Confirmar'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={resetDisableFlow}
+                                className="rounded-xl border border-red-300 text-red-700 font-bold px-5 py-3 hover:bg-red-100"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (settings.twoFactorEnabled) {
+                                    sendDisableCode();
+                                } else {
+                                    saveBaseSettings({ twoFactorEnabled: true });
+                                }
+                            }}
+                            disabled={saving || !settings.twoFactorEmail}
+                            className="rounded-2xl border border-gray-300 text-gray-900 font-bold px-5 py-3 disabled:opacity-50 flex items-center gap-2"
+                        >
+                            <LockKeyhole size={16} />
+                            {settings.twoFactorEnabled ? 'Desactivar doble verificacion' : 'Activar doble verificacion'}
+                        </button>
+                    )}
                 </div>
             </section>
         </div>

@@ -1,49 +1,43 @@
 # IMPLEMENTATION_PLAN.md
 
-Documento oficial de implementacion del proyecto ESCOLTA.
+## Objetivo
+Atender la solicitud de seguridad sobre la doble verificación (2FA):
+1. **Aclaración sobre el cambio de correo**: Explicar y verificar que el flujo de *cambio de correo* ya funciona como solicitaste (el primer código llega al correo 2FA actual antes de permitir colocar uno nuevo).
+2. **Desactivación Segura de 2FA**: Prevenir que cualquier persona con la sesión abierta pueda desactivar el 2FA con un simple clic. Requerir un código OTP enviado al correo 2FA configurado para poder apagarlo.
 
-Este archivo, junto con `TASKS.md` y `WALKTHROUGH.md`, es la bandera del proyecto. No eliminar ni reemplazar por `PLAN.md`.
-
-## Estado Actual Del Proyecto
-
-El proyecto ya está avanzado:
-- Login con Supabase funcionando.
-- Flujo 2FA por correo implementado.
-- Panel de perfil con gestión de seguridad implementado.
-- Tablas de seguridad creadas en Supabase.
-- Webhooks de ElevenLabs y WhatsApp endurecidos.
-- Variables sensibles movidas a Doppler/Supabase/Vercel según corresponda.
-
-## Hallazgos de la Auditoría
-
-Se realizó una revisión profunda de la seguridad del flujo 2FA y la integración con Doppler:
-
-1. **Conexión a Doppler:** Verificada. La CLI de Doppler está autenticada y el entorno `escolta_doppler` (dev) inyecta correctamente todas las variables sensibles.
-2. **Backend (Rutas API 2FA):** 
-   - El endpoint `/verify-code` verifica estrictamente que el `currentChallengeId` pertenezca a la validación del correo antiguo antes de permitir actualizar al nuevo.
-   - Los propósitos de los OTP (`change_2fa_current_email` y `change_2fa_new_email`) aseguran que un código no sirva para otro contexto.
-   - El uso de `supabaseAdmin` para crear y leer challenges está protegido por `requireAuth()`, mitigando riesgos de escalada de privilegios.
-3. **Frontend (Bug de recarga de pantalla):**
-   - El archivo `src/app/(app)/settings/profile/page.tsx` ya tiene separados los botones con `type="button"` y no hay un elemento `<form>` que dispare validaciones nativas que recarguen la página por error.
+## Estado Actual
+- **Cambiar correo 2FA**: ✅ Ya está implementado así. Cuando intentas cambiar el correo, el código que te pide bajo "Código del correo actual" se envía a la variable `two_factor_email`. Solo si validas ese correo, se te permite validar el nuevo. ¡Esto ya es 100% seguro!
+- **Desactivar 2FA**: ❌ Vulnerable. Actualmente, el botón "Desactivar doble verificación" simplemente hace una petición POST y lo apaga en la base de datos sin preguntar nada. 
 
 ## User Review Required
 
 > [!IMPORTANT]
-> El sistema 2FA está seguro y la lógica base está bien diseñada. El bug de refresco de pantalla al escribir el correo ya está parcheado a nivel código. 
-> 
-> **Decisión Pendiente:** En tus tareas mencionas que podríamos usar `sessionStorage` para mantener los pasos de validación en caso de que el usuario recargue accidentalmente la pestaña (F5). ¿Deseas que agregue esto al código de `page.tsx`, o prefieres probar el flujo actual primero para ver si es estable?
+> El plan es modificar el endpoint principal para bloquear la desactivación directa del 2FA. Cuando alguien haga clic en "Desactivar", el sistema ocultará el botón y mostrará un campo de código, enviando previamente un OTP al correo 2FA. 
+>
+> ¿Estás de acuerdo con implementar este nuevo flujo para el botón de Desactivar?
 
 ## Proposed Changes
 
-Si deseas implementar `sessionStorage`, el cambio sería:
+### [MODIFY] `src/app/api/security/settings/route.ts`
+- Modificar el método POST para que rechace automáticamente cualquier intento de enviar `{ twoFactorEnabled: false }`. Obligaremos a que el apagado del 2FA se haga exclusivamente por la ruta de verificación de OTP.
+
+### [MODIFY] `src/app/api/security/settings/send-code/route.ts`
+- Agregar soporte para un nuevo parámetro `action: 'disable_2fa'`.
+- Generar un OTP con el propósito especial `disable_2fa` y mandarlo por correo (al correo 2FA configurado).
+
+### [MODIFY] `src/app/api/security/settings/verify-code/route.ts`
+- Agregar soporte para verificar el propósito `disable_2fa`.
+- Si el código es correcto, actualizar `profile_security_settings` poniendo `two_factor_enabled: false`.
 
 ### [MODIFY] `src/app/(app)/settings/profile/page.tsx`
-- Agregar un `useEffect` para persistir `newTwoFactorEmail`, `changeStep`, `currentChallengeId`, y `newEmailChallengeId` en `sessionStorage`.
-- Leer estos valores al montar el componente para restaurar el estado si la página se recargó.
+- Crear un nuevo estado visual para el botón de desactivar:
+  - Si el usuario hace clic en "Desactivar", la UI pide el OTP en lugar de apagarlo directamente.
+  - Ocultar el botón original y mostrar el input de código de desactivación con botones de "Confirmar" y "Cancelar".
 
 ## Verification Plan
 
-### Manual Verification
-1. Ingresar a Perfil y probar escribir un nuevo correo (validar que la página no parpadee ni se recargue).
-2. Probar el flujo completo (recibir código 1, validar, recibir código 2, validar).
-3. Salir y volver a iniciar sesión para verificar que se requiere el código al nuevo correo.
+### Pruebas Manuales
+1. Al hacer clic en "Desactivar doble verificación", el panel no debe apagarse, sino que debe avisar que se envió un código al correo 2FA.
+2. Ingresar un código incorrecto debe fallar.
+3. Ingresar el código correcto enviado al correo 2FA debe apagar exitosamente el 2FA.
+4. (Opcional) Intentar hackear la petición mandando un cURL directamente al endpoint original debe resultar en un error `400 Bad Request`.

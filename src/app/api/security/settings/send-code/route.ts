@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const step = body.step === 'new' ? 'new' : 'current';
+    const step = ['new', 'current', 'disable'].includes(body.step) ? body.step : 'current';
     const currentChallengeId = typeof body.currentChallengeId === 'string' ? body.currentChallengeId.trim() : '';
 
     const profileLookup = await getProfileById(context.profile.id);
@@ -77,6 +77,41 @@ export async function POST(request: Request) {
             challengeId: challenge.challengeId,
             expiresAt: challenge.expiresAt,
             maskedEmail: maskEmail(email),
+        });
+    }
+
+    if (step === 'disable') {
+        const currentEmail = settings.two_factor_email || settings.alert_email || profileEmail;
+        if (!currentEmail || !currentEmail.includes('@')) {
+            return NextResponse.json({ error: 'No hay un correo configurado para enviar el código.' }, { status: 400 });
+        }
+
+        const challenge = await createOtpChallenge({
+            profileId: context.profile.id,
+            email: currentEmail,
+            purpose: 'disable_2fa',
+        });
+
+        await sendSecurityCodeEmail({
+            to: currentEmail,
+            code: challenge.code,
+            purposeLabel: 'desactivar la doble verificación de tu cuenta',
+        });
+
+        await logSecurityEvent({
+            profileId: context.profile.id,
+            email: context.profile.email,
+            eventType: '2FA_DISABLE_CHALLENGE_SENT',
+            request,
+            metadata: { challengeId: challenge.challengeId, targetEmail: currentEmail },
+        });
+
+        return NextResponse.json({
+            success: true,
+            step: 'disable',
+            challengeId: challenge.challengeId,
+            expiresAt: challenge.expiresAt,
+            maskedEmail: maskEmail(currentEmail),
         });
     }
 
