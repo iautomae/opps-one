@@ -70,7 +70,7 @@ function LoginContent({ subdomain }: { subdomain: string }) {
 
     useEffect(() => {
         if (!securityBlocked) return;
-        setError('Acceso bloqueado: por ahora solo se permite iniciar sesión desde Perú.');
+        setError('Acceso bloqueado: intento de inicio de sesión desde una región no autorizada.');
     }, [securityBlocked]);
 
     useEffect(() => {
@@ -344,7 +344,7 @@ function LoginContent({ subdomain }: { subdomain: string }) {
                                 />
                             </div>
                             <div className="text-xs text-slate-300 leading-6">
-                                Solo se permiten accesos desde Perú. Si este ingreso fue legítimo y no ves el correo, revisa spam o solicita un nuevo código.
+                                El acceso cuenta con restricciones geográficas. Si este ingreso fue legítimo y no ves el correo, revisa spam o solicita un nuevo código.
                             </div>
                             <div className="flex gap-3">
                                 <button
@@ -441,7 +441,7 @@ function LoginContent({ subdomain }: { subdomain: string }) {
                                 {isLoading ? 'Conectando...' : 'Continuar'}
                             </button>
                             <p className="text-[11px] text-slate-400 leading-5">
-                                Este panel es privado. El acceso se valida desde Perú y puede requerir un código adicional al correo de seguridad del usuario.
+                                Este panel es privado. El acceso cuenta con controles de seguridad regionales y puede requerir un código adicional al correo de seguridad del usuario.
                             </p>
                         </form>
                     )}

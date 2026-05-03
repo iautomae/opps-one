@@ -409,12 +409,12 @@ export default function ProfileSecurityPage() {
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-5">
                         <Shield size={24} />
                     </div>
-                    <h2 className="text-lg font-bold text-gray-900">Región de Acceso</h2>
+                    <h2 className="text-lg font-bold text-gray-900">Control de Acceso</h2>
                     <p className="text-sm text-gray-500 mt-2 flex-grow leading-relaxed">
-                        El acceso al sistema está estrictamente limitado geográficamente por motivos de seguridad institucional.
+                        El acceso al sistema está protegido por restricciones geográficas establecidas por políticas de seguridad institucionales.
                     </p>
                     <div className="mt-5 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 flex items-center justify-between">
-                        <span className="text-sm font-bold text-gray-700">Solo {settings.allowedCountries.join(', ')}</span>
+                        <span className="text-sm font-bold text-gray-700">Filtro Geográfico Activo</span>
                         <CheckCircle2 size={18} className="text-emerald-500"/>
                     </div>
                 </div>
