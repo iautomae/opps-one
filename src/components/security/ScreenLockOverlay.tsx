@@ -109,7 +109,7 @@ export function ScreenLockOverlay({ children }: { children: React.ReactNode }) {
                     <Lock size={40} />
                 </div>
                 
-                <h2 className="text-2xl font-bold text-white mb-2">Sesión Bloqueada</h2>
+                <h2 className="text-2xl font-bold !text-white mb-2">Sesión Bloqueada</h2>
                 <p className="text-slate-400 text-sm mb-8">Ingresa tu PIN de acceso rápido para continuar.</p>
                 
                 <form onSubmit={handleUnlock} className="space-y-6">

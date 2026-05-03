@@ -308,7 +308,7 @@ function LoginContent({ subdomain }: { subdomain: string }) {
                             </div>
                         )}
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm">
+                            <h2 className="text-3xl font-bold tracking-tight !text-white drop-shadow-sm">
                                 {flowState === 'verify' ? 'Verificación de seguridad' : 'Iniciar sesión'}
                             </h2>
                             <p className="mt-2 text-sm text-slate-300 font-medium">
