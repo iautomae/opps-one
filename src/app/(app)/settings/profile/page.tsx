@@ -10,7 +10,6 @@ type SecuritySettingsState = {
     twoFactorEnabled: boolean;
     allowedCountries: string[];
     notifyOnSuspicious: boolean;
-    alertEmail: string; // 'primary', '2fa', 'both'
     lastVerifiedAt: string | null;
     maskedTwoFactorEmail: string;
 };
@@ -22,7 +21,6 @@ const DEFAULT_SETTINGS: SecuritySettingsState = {
     twoFactorEnabled: false,
     allowedCountries: ['PE'],
     notifyOnSuspicious: true,
-    alertEmail: 'primary',
     lastVerifiedAt: null,
     maskedTwoFactorEmail: '',
 };
@@ -61,7 +59,7 @@ export default function ProfileSecurityPage() {
     const [alertsStep, setAlertsStep] = useState<'idle' | 'sent'>(() => typeof window !== 'undefined' ? (sessionStorage.getItem('2fa_alertsStep') as 'idle' | 'sent') || 'idle' : 'idle');
     const [alertsCode, setAlertsCode] = useState('');
     const [alertsChallengeId, setAlertsChallengeId] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('2fa_alertsChallenge') || '' : '');
-    const [tempAlertSettings, setTempAlertSettings] = useState<{notifyOnSuspicious: boolean, alertEmail: string} | null>(null);
+    const [tempNotifyOnSuspicious, setTempNotifyOnSuspicious] = useState<boolean | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -139,7 +137,7 @@ export default function ProfileSecurityPage() {
         setAlertsCode('');
         setAlertsChallengeId('');
         setAlertsStep('idle');
-        setTempAlertSettings(null);
+        setTempNotifyOnSuspicious(null);
         if (typeof window !== 'undefined') {
             sessionStorage.removeItem('2fa_alertsStep');
             sessionStorage.removeItem('2fa_alertsChallenge');
@@ -152,8 +150,8 @@ export default function ProfileSecurityPage() {
         return session.access_token;
     }
 
-    // Usado directamente cuando no hay 2FA, o en endpoints que no requieren confirmación adicional.
-    async function saveBaseSettings(next: Partial<SecuritySettingsState>) {
+    // Usado directamente cuando no hay 2FA.
+    async function saveBaseSettings(notifyOnSuspicious: boolean) {
         setSaving(true);
         setError('');
         setMessage('');
@@ -161,8 +159,7 @@ export default function ProfileSecurityPage() {
         try {
             const accessToken = await getAccessToken();
             const payload = {
-                notifyOnSuspicious: next.notifyOnSuspicious ?? settings.notifyOnSuspicious,
-                alertEmail: next.alertEmail ?? settings.alertEmail,
+                notifyOnSuspicious,
             };
 
             const res = await fetch('/api/security/settings', {
@@ -174,7 +171,7 @@ export default function ProfileSecurityPage() {
             const json = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(json.error || 'No se pudo guardar la configuracion.');
 
-            setSettings((prev) => ({ ...prev, ...next }));
+            setSettings((prev) => ({ ...prev, notifyOnSuspicious }));
             setMessage('Configuracion guardada correctamente.');
         } catch (err: unknown) {
             setError(getErrorMessage(err, 'No se pudo guardar la configuracion.'));
@@ -183,12 +180,12 @@ export default function ProfileSecurityPage() {
         }
     }
 
-    function handleAlertChange(nextSettings: {notifyOnSuspicious: boolean, alertEmail: string}) {
+    function handleAlertChange(notifyOnSuspicious: boolean) {
         if (!settings.twoFactorEnabled) {
-            saveBaseSettings(nextSettings);
+            saveBaseSettings(notifyOnSuspicious);
             return;
         }
-        setTempAlertSettings(nextSettings);
+        setTempNotifyOnSuspicious(notifyOnSuspicious);
         setIsAlertsModalOpen(true);
     }
 
@@ -214,7 +211,7 @@ export default function ProfileSecurityPage() {
     }
 
     async function verifyAlertsCode() {
-        if (!tempAlertSettings) return;
+        if (tempNotifyOnSuspicious === null) return;
         setSaving(true); setError(''); setMessage('');
         try {
             if (alertsCode.length !== 6) throw new Error('Ingresa el código completo.');
@@ -226,8 +223,7 @@ export default function ProfileSecurityPage() {
                     step: 'alerts', 
                     challengeId: alertsChallengeId, 
                     code: alertsCode,
-                    notifyOnSuspicious: tempAlertSettings.notifyOnSuspicious,
-                    alertDestination: tempAlertSettings.alertEmail
+                    notifyOnSuspicious: tempNotifyOnSuspicious
                 }),
             });
             const json = await res.json();
@@ -235,8 +231,7 @@ export default function ProfileSecurityPage() {
 
             setSettings((prev) => ({ 
                 ...prev, 
-                notifyOnSuspicious: tempAlertSettings.notifyOnSuspicious,
-                alertEmail: tempAlertSettings.alertEmail
+                notifyOnSuspicious: tempNotifyOnSuspicious
             }));
             resetAlertsFlow();
             setIsAlertsModalOpen(false);
@@ -282,7 +277,7 @@ export default function ProfileSecurityPage() {
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || 'No se pudo verificar el código de desactivación.');
 
-            setSettings((prev) => ({ ...prev, twoFactorEnabled: false, alertEmail: 'primary' }));
+            setSettings((prev) => ({ ...prev, twoFactorEnabled: false }));
             resetDisableFlow();
             setIsDisableModalOpen(false);
             setMessage('Doble verificación desactivada exitosamente.');
@@ -405,9 +400,6 @@ export default function ProfileSecurityPage() {
         );
     }
 
-    // Determine current alert email value
-    const currentAlertValue = ['primary', '2fa', 'both'].includes(settings.alertEmail) ? settings.alertEmail : 'primary';
-
     return (
         <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -464,25 +456,12 @@ export default function ProfileSecurityPage() {
                                     type="checkbox" 
                                     className="sr-only peer"
                                     checked={settings.notifyOnSuspicious}
-                                    onChange={(e) => handleAlertChange({ notifyOnSuspicious: e.target.checked, alertEmail: currentAlertValue })}
+                                    onChange={(e) => handleAlertChange(e.target.checked)}
                                     disabled={saving || !settings.twoFactorEnabled}
                                 />
                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
                             </label>
                         </div>
-                        
-                        {settings.notifyOnSuspicious && (
-                            <select
-                                value={currentAlertValue}
-                                onChange={(e) => handleAlertChange({ notifyOnSuspicious: settings.notifyOnSuspicious, alertEmail: e.target.value })}
-                                disabled={saving || !settings.twoFactorEnabled}
-                                className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-brand-primary focus:border-brand-primary block px-3 py-2.5 outline-none cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50"
-                            >
-                                <option value="primary">Enviar al Correo Principal</option>
-                                <option value="2fa">Enviar al Correo 2FA</option>
-                                <option value="both">Enviar a Ambos Correos</option>
-                            </select>
-                        )}
                     </div>
                 </div>
 
@@ -642,7 +621,7 @@ export default function ProfileSecurityPage() {
                             {alertsStep === 'idle' ? (
                                 <div className="space-y-5">
                                     <p className="text-sm text-gray-500 leading-relaxed text-center">
-                                        Estás intentando modificar a dónde se envían tus alertas de seguridad (o apagarlas). Para proteger tu cuenta, requerimos autorización 2FA.
+                                        Estás intentando modificar tus alertas de intrusión. Para proteger tu cuenta, requerimos autorización mediante tu correo de doble verificación.
                                     </p>
                                     <button
                                         onClick={sendAlertsCode}

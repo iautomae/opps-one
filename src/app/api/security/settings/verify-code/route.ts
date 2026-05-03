@@ -107,14 +107,12 @@ export async function POST(request: Request) {
         }
 
         const notifyOnSuspicious = typeof body.notifyOnSuspicious === 'boolean' ? body.notifyOnSuspicious : true;
-        const alertEmail = ['primary', '2fa', 'both'].includes(body.alertDestination) ? body.alertDestination : 'primary';
 
         const { error } = await supabaseAdmin
             .from('profile_security_settings')
             .upsert({
                 profile_id: context.profile.id,
                 notify_on_suspicious: notifyOnSuspicious,
-                alert_email: alertEmail,
             });
 
         if (error) {
@@ -126,7 +124,7 @@ export async function POST(request: Request) {
             email: context.profile.email,
             eventType: '2FA_ALERTS_UPDATED',
             request,
-            metadata: { challengeId, notifyOnSuspicious, alertEmail },
+            metadata: { challengeId, notifyOnSuspicious },
         });
 
         return NextResponse.json({

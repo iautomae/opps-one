@@ -403,21 +403,10 @@ export async function sendSuspiciousAccessAlert(params: {
 
 export function getAlertDestinations(settings: SecuritySettings, profileEmail: string | null | undefined): string[] {
     const destinations: string[] = [];
-    const primaryEmail = profileEmail || '';
-    
-    if (settings.alert_email === '2fa' && settings.two_factor_email) {
+    if (profileEmail) destinations.push(profileEmail);
+    if (settings.two_factor_enabled && settings.two_factor_email) {
         destinations.push(settings.two_factor_email);
-    } else if (settings.alert_email === 'both') {
-        if (primaryEmail) destinations.push(primaryEmail);
-        if (settings.two_factor_email) destinations.push(settings.two_factor_email);
-    } else {
-        if (settings.alert_email && settings.alert_email.includes('@')) {
-            destinations.push(settings.alert_email);
-        } else if (primaryEmail) {
-            destinations.push(primaryEmail);
-        }
     }
-    
     return Array.from(new Set(destinations));
 }
 
