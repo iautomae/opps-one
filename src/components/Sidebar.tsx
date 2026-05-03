@@ -64,6 +64,7 @@ export function Sidebar() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { activeCategory, setActiveCategory, isSubSidebarOpen, setSubSidebarOpen } = useUI();
+  const [showLogoutMenu, setShowLogoutMenu] = useState(false);
 
   // USER: Change this URL to your default logo image path
   const DEFAULT_LOGO_URL = "/brand/logo.jpg";
@@ -200,33 +201,48 @@ export function Sidebar() {
           </div>
         </button>
 
-        <div className="relative group/logout">
+        <div className="relative">
           <button
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-50 transition-all duration-300 group relative"
+            onClick={() => setShowLogoutMenu(!showLogoutMenu)}
+            className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group relative",
+              showLogoutMenu ? "bg-red-50 text-red-600" : "text-red-500 hover:bg-red-50"
+            )}
           >
             <LogOut size={20} />
           </button>
 
           {/* Logout/Lock Dropdown */}
-          <div className="absolute bottom-0 left-[60px] mb-0 opacity-0 invisible group-hover/logout:opacity-100 group-hover/logout:visible group-hover/logout:translate-x-2 transition-all duration-200 z-[100]">
-            <div className="bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 p-2 min-w-[140px] flex flex-col gap-1 animate-in slide-in-from-left-2">
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('app-lock'))}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-brand-primary transition-all text-left"
-              >
-                <Lock size={14} />
-                Bloquear
-              </button>
-              <div className="h-[1px] bg-slate-100 mx-2" />
-              <button
-                onClick={() => signOut()}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-all text-left"
-              >
-                <LogOut size={14} />
-                Salir
-              </button>
-            </div>
-          </div>
+          {showLogoutMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-[90]" 
+                onClick={() => setShowLogoutMenu(false)} 
+              />
+              <div className="absolute bottom-0 left-[60px] mb-0 z-[100] animate-in slide-in-from-left-2 duration-200">
+                <div className="bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 p-2 min-w-[140px] flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('app-lock'));
+                      setShowLogoutMenu(false);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-brand-primary transition-all text-left"
+                  >
+                    <Lock size={14} />
+                    Bloquear
+                  </button>
+                  <div className="h-[1px] bg-slate-100 mx-2" />
+                  <button
+                    onClick={() => signOut()}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-all text-left"
+                  >
+                    <LogOut size={14} />
+                    Salir
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
