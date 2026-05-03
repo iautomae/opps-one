@@ -2,6 +2,7 @@
 
 import { AuthGuard } from "@/components/AuthGuard";
 import { ClientLayout } from "@/components/ClientLayout";
+import { ScreenLockOverlay } from "@/components/security/ScreenLockOverlay";
 
 export default function AppLayout({
     children,
@@ -10,9 +11,11 @@ export default function AppLayout({
 }) {
     return (
         <AuthGuard>
-            <ClientLayout>
-                {children}
-            </ClientLayout>
+            <ScreenLockOverlay>
+                <ClientLayout>
+                    {children}
+                </ClientLayout>
+            </ScreenLockOverlay>
         </AuthGuard>
     );
 }

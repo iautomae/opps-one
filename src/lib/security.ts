@@ -24,6 +24,8 @@ export type SecuritySettings = {
     notify_on_suspicious: boolean;
     alert_email: string | null;
     last_verified_at: string | null;
+    lock_pin_hash: string | null;
+    lock_timeout_minutes: number;
 };
 
 export type ClientSecurityInfo = {
@@ -60,6 +62,8 @@ export async function ensureSecurityTables() {
                 notify_on_suspicious BOOLEAN NOT NULL DEFAULT true,
                 alert_email TEXT NULL,
                 last_verified_at TIMESTAMPTZ NULL,
+                lock_pin_hash TEXT NULL,
+                lock_timeout_minutes INTEGER NOT NULL DEFAULT 15,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
             );

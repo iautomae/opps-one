@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Shield, Bell, LockKeyhole, LoaderCircle, CheckCircle2, X, ArrowRight, ShieldCheck, ShieldAlert, Mail } from 'lucide-react';
+import { Shield, Bell, LockKeyhole, LoaderCircle, CheckCircle2, X, ArrowRight, ShieldCheck, ShieldAlert, Mail, Lock, KeyRound, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -12,6 +12,8 @@ type SecuritySettingsState = {
     notifyOnSuspicious: boolean;
     lastVerifiedAt: string | null;
     maskedTwoFactorEmail: string;
+    hasLockPin: boolean;
+    lockTimeoutMinutes: number;
 };
 
 type ChangeStep = 'idle' | 'current_sent' | 'current_verified' | 'new_sent';
@@ -23,6 +25,8 @@ const DEFAULT_SETTINGS: SecuritySettingsState = {
     notifyOnSuspicious: true,
     lastVerifiedAt: null,
     maskedTwoFactorEmail: '',
+    hasLockPin: false,
+    lockTimeoutMinutes: 15,
 };
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -41,6 +45,7 @@ export default function ProfileSecurityPage() {
     const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
     const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
     const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
+    const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
     // Form States
     const [newTwoFactorEmail, setNewTwoFactorEmail] = useState('');
@@ -60,6 +65,9 @@ export default function ProfileSecurityPage() {
     const [alertsCode, setAlertsCode] = useState('');
     const [alertsChallengeId, setAlertsChallengeId] = useState('');
     const [tempNotifyOnSuspicious, setTempNotifyOnSuspicious] = useState<boolean | null>(null);
+
+    const [newPin, setNewPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
 
     useEffect(() => {
         if (changeStep !== 'idle') setIsChangeModalOpen(true);
@@ -90,7 +98,6 @@ export default function ProfileSecurityPage() {
         loadSettings();
     }, []);
 
-    // Also clean up any lingering sessionStorage from the old version
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const keysToRemove = [
@@ -132,8 +139,7 @@ export default function ProfileSecurityPage() {
         return session.access_token;
     }
 
-    // Usado directamente cuando no hay 2FA.
-    async function saveBaseSettings(notifyOnSuspicious: boolean) {
+    async function saveBaseSettings(next: Partial<SecuritySettingsState>) {
         setSaving(true);
         setError('');
         setMessage('');
@@ -141,7 +147,8 @@ export default function ProfileSecurityPage() {
         try {
             const accessToken = await getAccessToken();
             const payload = {
-                notifyOnSuspicious,
+                notifyOnSuspicious: next.notifyOnSuspicious ?? settings.notifyOnSuspicious,
+                lockTimeoutMinutes: next.lockTimeoutMinutes ?? settings.lockTimeoutMinutes,
             };
 
             const res = await fetch('/api/security/settings', {
@@ -153,8 +160,8 @@ export default function ProfileSecurityPage() {
             const json = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(json.error || 'No se pudo guardar la configuracion.');
 
-            setSettings((prev) => ({ ...prev, notifyOnSuspicious }));
-            setMessage('Configuracion guardada correctamente.');
+            setSettings((prev) => ({ ...prev, ...next }));
+            setMessage('Configuración guardada correctamente.');
         } catch (err: unknown) {
             setError(getErrorMessage(err, 'No se pudo guardar la configuracion.'));
         } finally {
@@ -164,11 +171,49 @@ export default function ProfileSecurityPage() {
 
     function handleAlertChange(notifyOnSuspicious: boolean) {
         if (!settings.twoFactorEnabled || notifyOnSuspicious === true) {
-            saveBaseSettings(notifyOnSuspicious);
+            saveBaseSettings({ notifyOnSuspicious });
             return;
         }
         setTempNotifyOnSuspicious(notifyOnSuspicious);
         setIsAlertsModalOpen(true);
+    }
+
+    async function handleUpdatePin(e: React.FormEvent) {
+        e.preventDefault();
+        if (newPin.length < 4) {
+            setError('El PIN debe tener al menos 4 dígitos.');
+            return;
+        }
+        if (newPin !== confirmPin) {
+            setError('Los PINs no coinciden.');
+            return;
+        }
+
+        setSaving(true);
+        setError('');
+        setMessage('');
+
+        try {
+            const accessToken = await getAccessToken();
+            const res = await fetch('/api/security/settings/update-pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                body: JSON.stringify({ pin: newPin }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'No se pudo actualizar el PIN.');
+
+            setSettings(prev => ({ ...prev, hasLockPin: true }));
+            setIsPinModalOpen(false);
+            setNewPin('');
+            setConfirmPin('');
+            setMessage('PIN de bloqueo configurado correctamente.');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, 'No se pudo actualizar el PIN.'));
+        } finally {
+            setSaving(false);
+        }
     }
 
     async function sendAlertsCode() {
@@ -403,19 +448,19 @@ export default function ProfileSecurityPage() {
                 </div>
             )}
 
-            <div className="grid gap-6 md:grid-cols-3 items-stretch">
-                {/* Card 1: Acceso Regional */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 items-stretch">
+                {/* Card 1: Control de Acceso */}
                 <div className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-5">
                         <Shield size={24} />
                     </div>
                     <h2 className="text-lg font-bold text-gray-900">Control de Acceso</h2>
-                    <p className="text-sm text-gray-500 mt-2 flex-grow leading-relaxed">
-                        El acceso al sistema está protegido por restricciones geográficas establecidas por políticas de seguridad institucionales.
+                    <p className="text-xs text-gray-500 mt-2 flex-grow leading-relaxed">
+                        El acceso al sistema está protegido por restricciones geográficas establecidas por políticas institucionales.
                     </p>
                     <div className="mt-5 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 flex items-center justify-between">
-                        <span className="text-sm font-bold text-gray-700">Filtro Geográfico Activo</span>
-                        <CheckCircle2 size={18} className="text-emerald-500"/>
+                        <span className="text-xs font-bold text-gray-700">Filtro Geográfico Activo</span>
+                        <CheckCircle2 size={16} className="text-emerald-500"/>
                     </div>
                 </div>
 
@@ -424,15 +469,13 @@ export default function ProfileSecurityPage() {
                     <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-5">
                         <Bell size={24} />
                     </div>
-                    <h2 className="text-lg font-bold text-gray-900">Alertas de Intrusión</h2>
-                    <p className="text-sm text-gray-500 mt-2 flex-grow leading-relaxed">
-                        {!settings.twoFactorEnabled 
-                            ? "Activa el 2FA primero para poder administrar las alertas de seguridad de forma protegida."
-                            : "Recibirás notificaciones inmediatas si detectamos intentos de inicio de sesión sospechosos."}
+                    <h2 className="text-lg font-bold text-gray-900">Alertas</h2>
+                    <p className="text-xs text-gray-500 mt-2 flex-grow leading-relaxed">
+                        Recibirás notificaciones inmediatas ante intentos de inicio de sesión sospechosos.
                     </p>
-                    <div className="mt-5 space-y-3">
+                    <div className="mt-5">
                         <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                            <span className="text-sm font-bold text-gray-700">Notificar alertas</span>
+                            <span className="text-xs font-bold text-gray-700">Notificar</span>
                             <label className={`relative inline-flex items-center ${!settings.twoFactorEnabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                 <input 
                                     type="checkbox" 
@@ -452,27 +495,60 @@ export default function ProfileSecurityPage() {
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-colors ${settings.twoFactorEnabled ? 'bg-emerald-50 text-emerald-500' : 'bg-gray-100 text-gray-500'}`}>
                         {settings.twoFactorEnabled ? <ShieldCheck size={24} /> : <LockKeyhole size={24} />}
                     </div>
-                    <h2 className="text-lg font-bold text-gray-900">Doble Verificación</h2>
-                    <p className="text-sm text-gray-500 mt-2 flex-grow leading-relaxed">
+                    <h2 className="text-lg font-bold text-gray-900">Doble Factor</h2>
+                    <p className="text-xs text-gray-500 mt-2 flex-grow leading-relaxed">
                         {settings.twoFactorEnabled 
-                            ? `Protección activa. Códigos vinculados a ${settings.maskedTwoFactorEmail || 'tu correo 2FA'}.`
-                            : `Protección inactiva. Respaldo actual en ${profile?.email || 'tu correo principal'}.`}
+                            ? `Activo en ${settings.maskedTwoFactorEmail || 'tu correo'}.`
+                            : `Protege tu cuenta con un segundo factor.`}
                     </p>
                     <div className="mt-5 flex flex-col gap-2">
                         <button 
                             onClick={() => setIsChangeModalOpen(true)}
-                            className="w-full rounded-xl bg-gray-900 text-white font-bold px-4 py-3 text-sm hover:bg-gray-800 transition-colors"
+                            className="w-full rounded-xl bg-gray-900 text-white font-bold px-4 py-2.5 text-xs hover:bg-gray-800 transition-colors"
                         >
-                            {settings.twoFactorEnabled ? 'Cambiar Correo 2FA' : 'Configurar 2FA'}
+                            {settings.twoFactorEnabled ? 'Cambiar' : 'Configurar'}
                         </button>
                         {settings.twoFactorEnabled && (
                             <button 
                                 onClick={() => setIsDisableModalOpen(true)}
-                                className="w-full rounded-xl border border-red-100 bg-red-50 text-red-600 font-bold px-4 py-3 text-sm hover:bg-red-100 transition-colors"
+                                className="text-[10px] text-red-500 font-bold hover:underline"
                             >
                                 Desactivar 2FA
                             </button>
                         )}
+                    </div>
+                </div>
+
+                {/* Card 4: Bloqueo de App (Screen Lock) */}
+                <div className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-colors ${settings.hasLockPin ? 'bg-brand-turquoise/10 text-brand-turquoise' : 'bg-gray-100 text-gray-500'}`}>
+                        <Lock size={24} />
+                    </div>
+                    <h2 className="text-lg font-bold text-gray-900">Bloqueo App</h2>
+                    <p className="text-xs text-gray-500 mt-2 flex-grow leading-relaxed">
+                        Bloquea la interfaz tras un tiempo de inactividad. Requiere PIN para volver.
+                    </p>
+                    <div className="mt-5 space-y-3">
+                        <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                            <Clock size={16} className="text-slate-400" />
+                            <select 
+                                value={settings.lockTimeoutMinutes}
+                                onChange={(e) => saveBaseSettings({ lockTimeoutMinutes: parseInt(e.target.value) })}
+                                className="bg-transparent border-none text-[11px] font-bold text-slate-700 focus:ring-0 cursor-pointer"
+                            >
+                                <option value={1}>1 min</option>
+                                <option value={5}>5 mins</option>
+                                <option value={15}>15 mins</option>
+                                <option value={30}>30 mins</option>
+                                <option value={0}>Nunca</option>
+                            </select>
+                        </div>
+                        <button 
+                            onClick={() => setIsPinModalOpen(true)}
+                            className="w-full rounded-xl bg-gray-900 text-white font-bold px-4 py-2.5 text-xs hover:bg-gray-800 transition-colors"
+                        >
+                            {settings.hasLockPin ? 'Cambiar PIN' : 'Establecer PIN'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -690,6 +766,61 @@ export default function ProfileSecurityPage() {
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Configurar PIN de Bloqueo */}
+            {isPinModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-brand-turquoise/5">
+                            <h3 className="font-black text-brand-turquoise text-lg flex items-center gap-2">
+                                <KeyRound size={20}/>
+                                {settings.hasLockPin ? 'Cambiar PIN' : 'Configurar PIN'}
+                            </h3>
+                            <button onClick={() => setIsPinModalOpen(false)} className="text-slate-400 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 p-2 rounded-full transition-colors"><X size={20}/></button>
+                        </div>
+                        <form onSubmit={handleUpdatePin} className="p-6 space-y-6">
+                            <p className="text-sm text-gray-500 leading-relaxed text-center">
+                                El PIN te permite desbloquear la aplicación rápidamente tras un periodo de inactividad sin tener que cerrar sesión.
+                            </p>
+                            
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nuevo PIN (min. 4 dígitos)</label>
+                                    <input
+                                        type="password"
+                                        inputMode="numeric"
+                                        maxLength={8}
+                                        value={newPin}
+                                        onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="****"
+                                        className="w-full rounded-2xl border border-gray-200 px-4 py-4 text-center text-2xl font-black tracking-[0.5em] outline-none focus:ring-2 focus:ring-brand-turquoise/20 focus:border-brand-turquoise bg-gray-50/50"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Confirmar PIN</label>
+                                    <input
+                                        type="password"
+                                        inputMode="numeric"
+                                        maxLength={8}
+                                        value={confirmPin}
+                                        onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="****"
+                                        className="w-full rounded-2xl border border-gray-200 px-4 py-4 text-center text-2xl font-black tracking-[0.5em] outline-none focus:ring-2 focus:ring-brand-turquoise/20 focus:border-brand-turquoise bg-gray-50/50"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={saving || newPin.length < 4 || newPin !== confirmPin}
+                                className="w-full rounded-2xl bg-brand-turquoise text-black font-bold px-4 py-4 disabled:opacity-50 transition-colors shadow-lg shadow-brand-turquoise/20 flex justify-center items-center gap-2"
+                            >
+                                {saving ? <LoaderCircle className="animate-spin" size={18}/> : 'Guardar PIN'}
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}

@@ -40,7 +40,7 @@ const SUB_MENU_CONFIG = {
         title: 'Ajustes',
         items: [
             { label: 'Equipo', href: '/settings/team', icon: Users },
-            { label: 'Perfil', href: '/settings/profile', icon: Settings2 },
+            { label: 'Seguridad', href: '/settings/profile', icon: Settings2 },
         ]
     }
 };
